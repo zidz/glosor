@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ordläxan – Öva dina ord</title>
+<style>
+:root {
+  --primary: #7c3aed;
+  --primary-dark: #6d28d9;
+  --accent: #f59e0b;
+  --green: #22c55e;
+  --green-bg: #dcfce7;
+  --red: #ef4444;
+  --red-bg: #fee2e2;
+  --ink: #1f2937;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: 'Segoe UI', 'Comic Sans MS', 'Trebuchet MS', system-ui, sans-serif;
+  background: linear-gradient(135deg, #a78bfa 0%, #f472b6 55%, #fbbf24 100%);
+  min-height: 100vh;
+  color: var(--ink);
+}
+.container { max-width: 950px; margin: 0 auto; padding: 24px 16px 60px; }
+.screen { display: none; animation: fadeIn .3s ease; }
+.screen.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.app-title { font-size: 2.6rem; text-align: center; margin: 10px 0 0; color: #fff; text-shadow: 0 3px 8px rgba(0,0,0,.25); }
+h1 { text-align: center; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.25); }
+h2 { color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.2); }
+.subtitle { text-align: center; color: #fff; font-size: 1.1rem; margin: 4px 0 18px; }
+.card { background: #fff; border-radius: 20px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,.15); margin: 16px 0; }
+.btn {
+  font-family: inherit; font-size: 1.05rem; font-weight: 700;
+  padding: 12px 20px; border: none; border-radius: 16px; cursor: pointer;
+  background: #fff; color: var(--ink); box-shadow: 0 4px 0 rgba(0,0,0,.12);
+  transition: transform .12s ease, box-shadow .12s ease, background .15s;
+}
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: translateY(1px); box-shadow: 0 1px 0 rgba(0,0,0,.12); }
+.btn.primary { background: var(--primary); color: #fff; }
+.btn.primary:hover { background: var(--primary-dark); }
+.btn.huge { font-size: 1.5rem; padding: 18px 34px; }
+.btn-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 14px 0; }
+.back-btn { margin-top: 18px; }
+.home-link { display: block; margin: 22px auto 0; background: rgba(255,255,255,.85); }
+.hidden { display: none !important; }
+.svg-btn { display: inline-flex; align-items: center; justify-content: center; }
+
+/* Startskärm */
+#btn-create-new { display: block; margin: 22px auto; }
+.home-list { display: flex; flex-direction: column; gap: 12px; }
+.glossary-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: #fff; border-radius: 18px; padding: 14px 18px; cursor: pointer;
+  box-shadow: 0 5px 16px rgba(0,0,0,.14); transition: transform .12s;
+  flex-wrap: wrap;
+}
+.glossary-card:hover { transform: scale(1.015); }
+.glossary-info { flex: 1; min-width: 0; }
+.glossary-name { font-size: 1.3rem; font-weight: 800; }
+.glossary-meta { color: #6b7280; margin-top: 2px; }
+.glossary-actions { display: flex; gap: 8px; align-items: center; }
+.glossary-open { background: var(--primary); color: #fff; font-size: 1rem; }
+.glossary-edit { background: #dbeafe; color: #1e40af; font-size: 1rem; }
+.glossary-delete { background: var(--red-bg); color: var(--red); padding: 10px 12px; }
+.empty-msg { text-align: center; background: rgba(255,255,255,.8); border-radius: 16px; padding: 18px; font-size: 1.1rem; }
+
+/* Skapa läxa / Ändra läxa */
+.field-label { display: block; font-weight: 700; margin: 12px 0 6px; }
+#screen-create input[type=text], #screen-create select,
+#screen-edit input[type=text], #screen-edit select {
+  width: 100%; font-size: 1.1rem; font-family: inherit; padding: 12px; border: 2px solid #e5e7eb; border-radius: 12px; background: #fff;
+}
+.create-head { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+.col-head { font-weight: 800; }
+.create-rows { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.create-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.create-row input, .edit-row input { font-size: 1.05rem; font-family: inherit; padding: 10px; border: 2px solid #e5e7eb; border-radius: 12px; background: #fff; }
+.edit-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: center; }
+.row-del { background: var(--red-bg); color: var(--red); font-size: .9rem; padding: 8px 12px; }
+
+/* Meny */
+.dir-toggle { display: flex; gap: 12px; justify-content: center; margin: 16px 0; flex-wrap: wrap; }
+.dir-btn { font-size: 1.15rem; padding: 14px 22px; background: rgba(255,255,255,.8); }
+.dir-btn.active { background: var(--primary); color: #fff; box-shadow: 0 5px 0 rgba(0,0,0,.2); transform: scale(1.04); }
+.game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 18px 0; }
+.game-btn { font-size: 1.25rem; padding: 22px 14px; }
+.game-btn:nth-child(1) { background: #c4b5fd; }
+.game-btn:nth-child(2) { background: #93c5fd; }
+.game-btn:nth-child(3) { background: #86efac; }
+.game-btn:nth-child(4) { background: #fcd34d; }
+
+/* Klassiskt förhör */
+.top-row { margin-bottom: 10px; }
+.classic-rows { display: flex; flex-direction: column; gap: 10px; }
+.classic-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: center; background: #fff; border-radius: 14px; padding: 10px 14px; box-shadow: 0 3px 10px rgba(0,0,0,.1); }
+.classic-known { font-size: 1.25rem; font-weight: 700; }
+.classic-answer { display: flex; gap: 8px; align-items: center; }
+.classic-answer input { flex: 1; min-width: 0; font-size: 1.1rem; font-family: inherit; padding: 10px; border: 2px solid #e5e7eb; border-radius: 12px; }
+input.correct { background: var(--green-bg) !important; border-color: var(--green) !important; color: #166534; font-weight: 700; }
+.speaker { border: none; background: #dbeafe; border-radius: 50%; width: 44px; height: 44px; cursor: pointer; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; color: #1e40af; }
+.done-msg { text-align: center; font-size: 1.4rem; font-weight: 800; color: #166534; background: var(--green-bg); border-radius: 16px; padding: 14px; margin-top: 16px; }
+
+/* Quiz */
+#quiz-area { background: #fff; border-radius: 20px; padding: 24px; box-shadow: 0 8px 24px rgba(0,0,0,.15); text-align: center; min-height: 260px; margin-bottom: 6px; }
+.quiz-prompt-label { color: #6b7280; font-weight: 700; }
+.quiz-prompt { font-size: 2.4rem; font-weight: 900; margin: 10px 0 22px; color: var(--primary); }
+.quiz-choices { display: flex; flex-direction: column; gap: 12px; max-width: 480px; margin: 0 auto; }
+.quiz-answer { font-size: 1.3rem; font-weight: 700; padding: 16px; border-radius: 16px; background: #eef2ff; border: 3px solid transparent; cursor: pointer; }
+.quiz-answer.correct { background: var(--green-bg); border-color: var(--green); color: #166534; }
+.quiz-answer.wrong { background: var(--red-bg); border-color: var(--red); color: #991b1b; animation: shake .4s; }
+@keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+.quiz-end-emoji { font-size: 3.5rem; }
+.quiz-end-score { font-size: 1.3rem; }
+
+/* Matcha orden */
+.match-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.match-col { background: rgba(255,255,255,.75); border-radius: 16px; padding: 14px; }
+.match-col h3 { text-align: center; margin: 4px 0 12px; }
+.match-item { display: block; width: 100%; margin-bottom: 10px; padding: 13px; font-size: 1.15rem; font-weight: 700; font-family: inherit; border-radius: 12px; border: 3px solid #e5e7eb; background: #fff; cursor: pointer; transition: all .12s; }
+.match-item.selected { border-color: var(--accent); background: #fef3c7; transform: scale(1.03); }
+.match-item.matched { background: var(--green-bg); border-color: var(--green); color: #166534; cursor: default; opacity: .85; }
+.match-item.wrong { background: var(--red-bg); border-color: var(--red); animation: shake .4s; }
+
+/* Lyssna & stava */
+.spell-card { text-align: center; }
+.spell-instr { font-size: 1.2rem; font-weight: 700; }
+.spell-hint { font-size: 1.3rem; background: #fef3c7; border-radius: 12px; padding: 10px; margin: 12px 0; }
+.spell-tip { color: #6b7280; font-size: .95rem; margin-top: 10px; }
+.listen-btn { font-size: 1.6rem; padding: 18px 44px; margin: 12px auto; display: inline-block; }
+.listen-btn.speaking { background: var(--accent); animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+.spell-input-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+#spell-input { font-size: 1.2rem; font-family: inherit; padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 14px; width: min(320px, 70vw); text-align: center; }
+input.wrong { border-color: var(--red) !important; background: var(--red-bg) !important; animation: shake .4s; }
+.spell-status { font-size: 1.05rem; font-weight: 700; color: #991b1b; background: var(--red-bg); border-radius: 12px; padding: 8px 14px; margin: 8px auto; max-width: 480px; }
+
+@media (max-width: 640px) {
+  .classic-row, .create-row, .edit-row, .create-head, .match-cols, .game-grid { grid-template-columns: 1fr; }
+  .row-del { justify-self: stretch; }
+  .app-title { font-size: 2rem; }
+  .quiz-prompt { font-size: 1.8rem; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- STARTSKÄRM -->
+  <section id="screen-home" class="screen">
+    <h1 class="app-title">📚 Ordläxan</h1>
+    <p class="subtitle">Öva dina ord på roliga sätt!</p>
+    <button id="btn-create-new" class="btn primary huge">➕ Skapa ny läxa</button>
+    <div class="btn-row">
+      <button id="btn-export" class="btn" title="Spara alla läxor som en backupfil (json)">⬇️ Exportera läxor</button>
+      <button id="btn-import" class="btn" title="Lägg till läxor från en backupfil (json)">⬆️ Importera läxor</button>
+      <button id="btn-toggle-archive" class="btn" title="Visa eller dölj arkiverade läxor">📦 Visa arkiv</button>
+    </div>
+    <input type="file" id="import-file" accept=".json,application/json" class="hidden">
+    <h2 id="home-heading">Sparade läxor</h2>
+    <div id="home-list" class="home-list"></div>
+  </section>
+
+  <!-- SKAPA NY LÄXA -->
+  <section id="screen-create" class="screen">
+    <h1>➕ Skapa ny läxa</h1>
+    <div class="card">
+      <label class="field-label" for="create-name">Namn på läxan</label>
+      <input id="create-name" type="text" placeholder="t.ex. Engelska vecka 35">
+      <label class="field-label" for="create-lang">Målspråk</label>
+      <select id="create-lang">
+        <option value="en">Engelska</option>
+        <option value="de">Tyska</option>
+      </select>
+      <div class="create-head">
+        <span class="col-head">🌍 Utländskt ord</span>
+        <span class="col-head">🇸🇪 Svenskt ord</span>
+      </div>
+      <div id="create-rows" class="create-rows"></div>
+      <div class="btn-row">
+        <button id="create-add-row" class="btn">➕ Lägg till rad</button>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button id="create-save" class="btn primary huge">💾 Spara och välj spel</button>
+      <button id="create-cancel" class="btn">Avbryt</button>
+    </div>
+  </section>
+
+  <!-- ÄNDRA LÄXA -->
+  <section id="screen-edit" class="screen">
+    <h1>✏️ Ändra läxa</h1>
+    <p class="subtitle">Lägg till, ta bort eller rätta stavningen på orden.</p>
+    <div class="card">
+      <label class="field-label" for="edit-name">Namn på läxan</label>
+      <input id="edit-name" type="text" placeholder="t.ex. Engelska vecka 35">
+      <label class="field-label" for="edit-lang">Målspråk</label>
+      <select id="edit-lang">
+        <option value="en">Engelska</option>
+        <option value="de">Tyska</option>
+      </select>
+      <div class="create-head">
+        <span class="col-head">🌍 Utländskt ord</span>
+        <span class="col-head">🇸🇪 Svenskt ord</span>
+      </div>
+      <div id="edit-rows" class="create-rows"></div>
+      <div class="btn-row">
+        <button id="edit-add-row" class="btn">➕ Lägg till rad</button>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button id="edit-save" class="btn primary huge">💾 Spara ändringar</button>
+      <button id="edit-cancel" class="btn">Avbryt</button>
+    </div>
+  </section>
+
+  <!-- SPELMENY -->
+  <section id="screen-menu" class="screen">
+    <h1 id="menu-name">📚 Läxa</h1>
+    <p id="menu-info" class="subtitle"></p>
+    <h2>Vilket sätt vill du öva på?</h2>
+    <div class="dir-toggle">
+      <button class="btn dir-btn" data-dir="sv2foreign">Svenska ➔ Utländskt</button>
+      <button class="btn dir-btn" data-dir="foreign2sv">Utländskt ➔ Svenska</button>
+    </div>
+    <div class="game-grid">
+      <button id="btn-game-classic" class="btn game-btn">🎯 Klassiskt Förhör</button>
+      <button id="btn-game-quiz" class="btn game-btn">❓ Flervalsquiz</button>
+      <button id="btn-game-match" class="btn game-btn">🧩 Matcha Orden</button>
+      <button id="btn-game-spell" class="btn game-btn">🎧 Lyssna &amp; Stava</button>
+    </div>
+    <button id="menu-to-home" class="btn home-link">🏠 Till startsidan</button>
+  </section>
+
+  <!-- KLASSISKT FÖRHÖR -->
+  <section id="screen-classic" class="screen">
+    <h1>🎯 Klassiskt Förhör</h1>
+    <p id="classic-subtitle" class="subtitle"></p>
+    <div class="btn-row top-row">
+      <button id="classic-show-all" class="btn">👁️ Visa alla</button>
+      <button id="classic-back" class="btn">🏠 Tillbaka till menyn</button>
+    </div>
+    <div id="classic-rows" class="classic-rows"></div>
+    <p id="classic-done" class="done-msg hidden"></p>
+  </section>
+
+  <!-- FLERTVALSQUIZ -->
+  <section id="screen-quiz" class="screen">
+    <h1>❓ Flervalsquiz</h1>
+    <p id="quiz-progress" class="subtitle"></p>
+    <div id="quiz-area"></div>
+    <button class="btn back-btn" id="quiz-back">🏠 Tillbaka till menyn</button>
+  </section>
+
+  <!-- MATCHA ORDEN -->
+  <section id="screen-match" class="screen">
+    <h1>🧩 Matcha Orden</h1>
+    <p class="subtitle">Klicka på ett ord i varje kolumn som betyder detsamma.</p>
+    <div class="match-cols">
+      <div class="match-col">
+        <h3>🇸🇪 Svenska</h3>
+        <div id="match-swedish"></div>
+      </div>
+      <div class="match-col">
+        <h3 id="match-foreign-title">🌍 Utländska</h3>
+        <div id="match-foreign"></div>
+      </div>
+    </div>
+    <p id="match-done" class="done-msg hidden">🎉 Klart! Du matchade alla ord!</p>
+    <button class="btn back-btn" id="match-back">🏠 Tillbaka till menyn</button>
+  </section>
+
+  <!-- LYSSNA & STAVA -->
+  <section id="screen-spell" class="screen">
+    <h1>🎧 Lyssna &amp; Stava</h1>
+    <p id="spell-progress" class="subtitle"></p>
+    <div id="spell-area" class="card spell-card">
+      <p id="spell-instr" class="spell-instr"></p>
+      <p id="spell-hint" class="spell-hint hidden"></p>
+      <button id="spell-listen" class="btn primary huge listen-btn">🔊 Lyssna</button>
+      <div class="spell-input-row">
+        <input id="spell-input" type="text" autocomplete="off" placeholder="Stava ordet här...">
+        <button id="spell-check-btn" class="btn">Kolla ✔</button>
+      </div>
+      <p id="spell-status" class="spell-status hidden"></p>
+      <p class="spell-tip">Tips: Tryck på "Lyssna" så många gånger du vill!</p>
+    </div>
+    <p id="spell-done" class="done-msg hidden">🎉 Klart! Du stavade alla ord rätt!</p>
+    <div id="spell-done-btns" class="btn-row hidden">
+      <button id="spell-restart" class="btn primary">Spela igen 🔄</button>
+    </div>
+    <button class="btn back-btn" id="spell-back">🏠 Tillbaka till menyn</button>
+  </section>
+
+</div>
+
+<script>
+// ---------- Hjälpfunktioner ----------
+var STORAGE_KEY = 'ordlaexan_glossaries';
+var LISTEN_LABEL = '🔊 Lyssna';
+
+// SVG-ikoner (rättas alltid, oberoende av webbläsarens teckensnitt)
+var SPEAKER_SVG = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>';
+var TRASH_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>';
+
+function loadGlossaries() {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) { return []; }
+}
+
+function saveGlossaries(list) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  } catch (e) {
+    alert('Kunde inte spara. Lagringsminnet är kanske fullt?');
+  }
+}
+
+// Senast tillagde överst (stabil, baserad på createdAt)
+function sortGlossaries(list) {
+  return list.slice().sort(function (a, b) {
+    var ta = a.createdAt || '';
+    var tb = b.createdAt || '';
+    if (ta < tb) return 1;
+    if (ta > tb) return -1;
+    return 0;
+  });
+}
+
+function shuffle(arr) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+function norm(s) { return (s || '').trim().toLowerCase().replace(/\s+/g, ' '); }
+
+function esc(s) {
+  var d = document.createElement('div');
+  d.textContent = (s == null) ? '' : String(s);
+  return d.innerHTML;
+}
+
+// ---------- Tal (Web Speech API) ----------
+var voices = [];
+function loadVoices() {
+  if ('speechSynthesis' in window) { voices = window.speechSynthesis.getVoices(); }
+}
+if ('speechSynthesis' in window) {
+  loadVoices();
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+// onDone(kallad med true om felet uppstod) ger synlig feedback även om ljudet inte fungerar
+function speak(word, lang, onDone) {
+  if (!('speechSynthesis' in window)) {
+    if (onDone) { onDone(true); }
+    else { alert('Tyvärr kan din webbläsare inte läsa högt. Prova en modern webbläsare som Chrome eller Edge.'); }
+    return;
+  }
+  window.speechSynthesis.cancel();
+  var u = new SpeechSynthesisUtterance(word);
+  var want = (lang === 'de') ? 'de' : 'en';
+  var list = voices.length ? voices : window.speechSynthesis.getVoices();
+  var v = null;
+  for (var i = 0; i < list.length; i++) {
+    var vl = (list[i].lang || '').toLowerCase().replace('_', '-');
+    if (vl === (want === 'de' ? 'de-de' : 'en-gb')) { v = list[i]; break; }
+  }
+  if (!v) {
+    for (var k = 0; k < list.length; k++) {
+      if ((list[k].lang || '').toLowerCase().replace('_', '-').indexOf(want) === 0) { v = list[k]; break; }
+    }
+  }
+  if (v) { u.voice = v; }
+  u.lang = (want === 'de') ? 'de-DE' : 'en-GB';
+  u.rate = 0.85;
+  var finished = false;
+  function fin(err) { if (!finished) { finished = true; if (onDone) { onDone(err); } } }
+  u.onend = function () { fin(false); };
+  u.onerror = function () { fin(true); };
+  window.speechSynthesis.speak(u);
+  // Säkerhetsnät: vissa webbläsare utlöser aldrig onend
+  setTimeout(function () { fin(false); }, (word.length * 250) + 2500);
+}
+
+// ---------- Tillstånd ----------
+var state = {
+  glossaries: [],
+  current: null,
+  showArchive: false, // true = visa arkiverade läxor på startsidan
+  direction: 'sv2foreign' // 'sv2foreign' = Svenska ➔ Utländskt, 'foreign2sv' = Utländskt ➔ Svenska
+};
+
+function langLabel(l) { return (l === 'de') ? 'Tyska' : 'Engelska'; }
+
+// ---------- Navigation ----------
+function showScreen(id) {
+  var screens = document.querySelectorAll('.screen');
+  for (var i = 0; i < screens.length; i++) { screens[i].classList.remove('active'); }
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+// ---------- Startskärm ----------
+function showHome() {
+  state.glossaries = loadGlossaries();
+  renderHome();
+  showScreen('screen-home');
+}
+
+function renderHome() {
+  var box = document.getElementById('home-list');
+  box.innerHTML = '';
+  var heading = document.getElementById('home-heading');
+  var toggle = document.getElementById('btn-toggle-archive');
+  var archiveCount = 0;
+  state.glossaries.forEach(function (g) { if (g.archived) { archiveCount++; } });
+  if (state.showArchive) {
+    heading.textContent = '📦 Arkiverade läxor';
+    toggle.textContent = '📚 Visa alla läxor';
+    toggle.title = 'Visa de vanliga läxorna';
+  } else {
+    heading.textContent = 'Sparade läxor';
+    toggle.textContent = '📦 Visa arkiv' + (archiveCount ? ' (' + archiveCount + ')' : '');
+    toggle.title = 'Visa eller dölj arkiverade läxor';
+  }
+  var list = sortGlossaries(state.glossaries).filter(function (g) { return !!g.archived === state.showArchive; });
+  if (!list.length) {
+    box.innerHTML = state.showArchive
+      ? '<p class="empty-msg">Inga arkiverade läxor ännu.<br>Tryck på <b>📦 Arkivera</b> på en läxa för att städa startsidan.</p>'
+      : '<p class="empty-msg">Inga sparade läxor ännu.<br>Tryck på <b>"Skapa ny läxa"</b> och börja öva! ✏️</p>';
+    return;
+  }
+  list.forEach(function (g) {
+    var card = document.createElement('div');
+    card.className = 'glossary-card';
+    card.title = 'Klicka för att öva';
+    var info = document.createElement('div');
+    info.className = 'glossary-info';
+    info.innerHTML = '<div class="glossary-name">' + esc(g.name) + '</div>' +
+      '<div class="glossary-meta">🌍 ' + langLabel(g.language) + ' · 📚 ' + g.words.length + ' ord</div>';
+    var actions = document.createElement('div');
+    actions.className = 'glossary-actions';
+    var openBtn = document.createElement('button');
+    openBtn.className = 'btn glossary-open';
+    openBtn.textContent = 'Öva! ▶';
+    openBtn.onclick = function (e) { e.stopPropagation(); openGlossary(g.id); };
+    var editBtn = null;
+    if (g.archived) {
+      editBtn = document.createElement('button');
+      editBtn.className = 'btn glossary-edit';
+      editBtn.textContent = '📤 Återställ';
+      editBtn.title = 'Flytta tillbaka läxan till startsidan';
+      editBtn.onclick = function (e) { e.stopPropagation(); setArchived(g.id, false); };
+    } else {
+      editBtn = document.createElement('button');
+      editBtn.className = 'btn glossary-edit';
+      editBtn.textContent = '✏️ Ändra';
+      editBtn.title = 'Ändra ord i läxan';
+      editBtn.onclick = function (e) { e.stopPropagation(); editGlossary(g.id); };
+    }
+    var archBtn = document.createElement('button');
+    if (!g.archived) {
+      archBtn.className = 'btn glossary-edit';
+      archBtn.textContent = '📦 Arkivera';
+      archBtn.title = 'Dölj läxan från startsidan (finns kvar i arkivet)';
+      archBtn.onclick = function (e) { e.stopPropagation(); setArchived(g.id, true); };
+    } else {
+      archBtn.style.display = 'none';
+    }
+    var delBtn = document.createElement('button');
+    delBtn.className = 'btn glossary-delete svg-btn';
+    delBtn.innerHTML = TRASH_SVG;
+    delBtn.title = 'Ta bort läxan';
+    delBtn.onclick = function (e) { e.stopPropagation(); deleteGlossary(g.id); };
+    actions.appendChild(openBtn);
+    actions.appendChild(editBtn);
+    actions.appendChild(archBtn);
+    actions.appendChild(delBtn);
+    card.appendChild(info);
+    card.appendChild(actions);
+    card.onclick = function () { openGlossary(g.id); };
+    box.appendChild(card);
+  });
+}
+
+function openGlossary(id) {
+  var g = null;
+  for (var i = 0; i < state.glossaries.length; i++) { if (state.glossaries[i].id === id) { g = state.glossaries[i]; break; } }
+  if (!g) {
+    var all = loadGlossaries();
+    for (var j = 0; j < all.length; j++) { if (all[j].id === id) { g = all[j]; break; } }
+  }
+  if (!g) { alert('Läxan kunde inte hittas.'); return; }
+  state.current = g;
+  showMenu();
+}
+
+function deleteGlossary(id) {
+  var g = null;
+  for (var i = 0; i < state.glossaries.length; i++) { if (state.glossaries[i].id === id) { g = state.glossaries[i]; break; } }
+  if (!g) { return; }
+  if (!confirm('Vill du verkligen ta bort "' + g.name + '"?')) { return; }
+  var list = loadGlossaries().filter(function (x) { return x.id !== id; });
+  saveGlossaries(list);
+  state.glossaries = list; // håll in-minne i synk så listan laddas om direkt
+  renderHome();
+}
+
+function setArchived(id, archived) {
+  var list = loadGlossaries();
+  var g = null;
+  for (var i = 0; i < list.length; i++) { if (list[i].id === id) { g = list[i]; break; } }
+  if (!g) { return; }
+  g.archived = !!archived;
+  saveGlossaries(list);
+  state.glossaries = list; // håll in-minne i synk
+  renderHome();
+}
+
+function toggleArchive() {
+  state.showArchive = !state.showArchive;
+  renderHome();
+}
+
+// ---------- Exportera / Importera (backup) ----------
+var EXPORT_FORMAT = 'ordlaexan';
+
+function exportGlossaries() {
+  var list = loadGlossaries();
+  if (!list.length) { alert('Det finns inga sparade läxor att exportera. Skapa en läxa först! ✏️'); return; }
+  var archCount = 0;
+  list.forEach(function (g) { if (g.archived) { archCount++; } });
+  var payload = {
+    app: EXPORT_FORMAT,
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    glossaries: list
+  };
+  var d = new Date();
+  function p2(n) { return (n < 10 ? '0' : '') + n; }
+  var fname = 'ordlaexan-backup-' + d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + '.json';
+  try {
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = fname;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+    alert('✅ Exporterad ' + list.length + ' läxor till "' + fname + '".' + (archCount ? ' (inklusive ' + archCount + ' arkiverad' + (archCount > 1 ? 'a' : '') + ')' : ''));
+  } catch (e) {
+    alert('Tyvärr – exporten misslyckades. ' + e.message);
+  }
+}
+
+// Validerar en enskild läxa ur importfilen – returnerar rensad läxa eller null
+function sanitizeImportedGlossary(g) {
+  if (!g || typeof g !== 'object') { return null; }
+  var name = (typeof g.name === 'string') ? g.name.trim() : '';
+  if (!name) { return null; }
+  var language = (g.language === 'de') ? 'de' : 'en';
+  var words = [];
+  if (Object.prototype.toString.call(g.words) === '[object Array]') {
+    for (var i = 0; i < g.words.length; i++) {
+      var w = g.words[i];
+      if (!w || typeof w !== 'object') { continue; }
+      var f = (typeof w.foreign === 'string') ? w.foreign.trim() : '';
+      var s = (typeof w.swedish === 'string') ? w.swedish.trim() : '';
+      if (f && s) { words.push({ foreign: f, swedish: s }); }
+    }
+  }
+  if (!words.length) { return null; }
+  var createdAt = (typeof g.createdAt === 'string' && g.createdAt) ? g.createdAt : new Date().toISOString();
+  var archived = (g.archived === true);
+  return { name: name, language: language, words: words, createdAt: createdAt, archived: archived };
+}
+
+function importGlossaries() {
+  var fileInput = document.getElementById('import-file');
+  if (!fileInput.files || !fileInput.files.length) { return; }
+  var file = fileInput.files[0];
+  var reader = new FileReader();
+  reader.onload = function () {
+    var imported = [];
+    try {
+      var data = JSON.parse(reader.result);
+      if (data && Object.prototype.toString.call(data.glossaries) === '[object Array]') {
+        imported = data.glossaries;
+      } else if (Object.prototype.toString.call(data) === '[object Array]') {
+        imported = data;
+      } else {
+        alert('⚠️ Filen ser inte ut som en Ordläxan-backup (json).');
+        return;
+      }
+    } catch (e) {
+      alert('⚠️ Kunde inte läsa filen – det är inte giltig json.');
+      return;
+    }
+    var list = loadGlossaries();
+    var existingIds = {};
+    var existingNames = {};
+    list.forEach(function (g) {
+      if (g.id) { existingIds[g.id] = true; }
+      existingNames[norm(g.name)] = true;
+    });
+    var added = 0;
+    var ignoredSameName = 0;
+    var invalid = 0;
+    for (var i = 0; i < imported.length; i++) {
+      var clean = sanitizeImportedGlossary(imported[i]);
+      if (!clean) { invalid++; continue; }
+      if (existingNames[norm(clean.name)]) { ignoredSameName++; continue; }
+      // Ny unik id (återanvänder ursprunglig id om den inte krockar)
+      var id = (imported[i] && imported[i].id && !existingIds[imported[i].id])
+        ? String(imported[i].id)
+        : 'g_' + Date.now() + '_' + Math.floor(Math.random() * 100000) + '_' + i;
+      var g = { id: id, name: clean.name, language: clean.language, words: clean.words, createdAt: clean.createdAt, archived: clean.archived };
+      list.unshift(g);
+      existingIds[id] = true;
+      existingNames[norm(clean.name)] = true;
+      added++;
+    }
+    if (added > 0) { saveGlossaries(list); }
+    var msg = '📥 Import klar!\n\nLäggda till: ' + added;
+    if (ignoredSameName) { msg += '\nHoppade över (samma namn finns redan): ' + ignoredSameName; }
+    if (invalid) { msg += '\nHoppade över (ogiltig/oskomplett): ' + invalid; }
+    if (!added && !ignoredSameName && !invalid) { msg += '\n\nInga läxor hittades i filen.'; }
+    alert(msg);
+    fileInput.value = '';
+    if (added > 0) { showHome(); }
+  };
+  reader.onerror = function () {
+    alert('⚠️ Kunde inte läsa filen.');
+    fileInput.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ---------- Skapa ny läxa ----------
+function showCreate() {
+  document.getElementById('create-name').value = '';
+  document.getElementById('create-lang').value = 'en';
+  var rowsBox = document.getElementById('create-rows');
+  rowsBox.innerHTML = '';
+  for (var i = 0; i < 3; i++) { addCreateRow(); }
+  showScreen('screen-create');
+  document.getElementById('create-name').focus();
+}
+
+function addCreateRow() {
+  var rowsBox = document.getElementById('create-rows');
+  var row = document.createElement('div');
+  row.className = 'create-row';
+  row.innerHTML = '<input type="text" class="create-foreign" autocomplete="off" placeholder="Utländskt ord" aria-label="Utländskt ord">' +
+    '<input type="text" class="create-swedish" autocomplete="off" placeholder="Svenskt ord" aria-label="Svenskt ord">';
+  rowsBox.appendChild(row);
+}
+
+function saveNewGlossary() {
+  var name = document.getElementById('create-name').value.trim();
+  var language = document.getElementById('create-lang').value;
+  if (!name) { alert('Skriv först ett namn på din läxa! 📝'); return; }
+  var words = [];
+  var rows = document.querySelectorAll('#create-rows .create-row');
+  rows.forEach(function (r) {
+    var f = r.querySelector('.create-foreign').value.trim();
+    var s = r.querySelector('.create-swedish').value.trim();
+    if (f && s) { words.push({ foreign: f, swedish: s }); }
+  });
+  if (!words.length) {
+    alert('Lägg till minst ett ordpar – både det utländska och det svenska ordet. ✏️');
+    return;
+  }
+  var list = loadGlossaries();
+  var g = {
+    id: 'g_' + Date.now() + '_' + Math.floor(Math.random() * 100000),
+    name: name,
+    language: language,
+    words: words,
+    createdAt: new Date().toISOString()
+  };
+  list.unshift(g);
+  saveGlossaries(list);
+  state.current = g;
+  state.direction = 'sv2foreign';
+  showMenu();
+}
+
+// ---------- Ändra läxa ----------
+var editTargetId = null;
+
+function editGlossary(id) {
+  var all = loadGlossaries();
+  var g = null;
+  for (var i = 0; i < all.length; i++) { if (all[i].id === id) { g = all[i]; break; } }
+  if (!g) { alert('Läxan kunde inte hittas.'); return; }
+  editTargetId = id;
+  document.getElementById('edit-name').value = g.name;
+  document.getElementById('edit-lang').value = g.language;
+  var box = document.getElementById('edit-rows');
+  box.innerHTML = '';
+  g.words.forEach(function (w) { addEditRow(w.foreign, w.swedish); });
+  if (!g.words.length) { addEditRow('', ''); }
+  showScreen('screen-edit');
+}
+
+function addEditRow(f, s) {
+  var box = document.getElementById('edit-rows');
+  var row = document.createElement('div');
+  row.className = 'edit-row';
+  var inpF = document.createElement('input');
+  inpF.type = 'text';
+  inpF.className = 'edit-foreign';
+  inpF.autocomplete = 'off';
+  inpF.placeholder = 'Utländskt ord';
+  inpF.value = f || '';
+  var inpS = document.createElement('input');
+  inpS.type = 'text';
+  inpS.className = 'edit-swedish';
+  inpS.autocomplete = 'off';
+  inpS.placeholder = 'Svenskt ord';
+  inpS.value = s || '';
+  var del = document.createElement('button');
+  del.className = 'btn row-del';
+  del.textContent = 'Ta bort ✕';
+  del.title = 'Ta bort denna rad';
+  del.onclick = function () { row.parentNode.removeChild(row); };
+  row.appendChild(inpF);
+  row.appendChild(inpS);
+  row.appendChild(del);
+  box.appendChild(row);
+}
+
+function saveEditedGlossary() {
+  var name = document.getElementById('edit-name').value.trim();
+  var language = document.getElementById('edit-lang').value;
+  if (!name) { alert('Läxan måste ha ett namn! 📝'); return; }
+  var words = [];
+  var rows = document.querySelectorAll('#edit-rows .edit-row');
+  rows.forEach(function (r) {
+    var f = r.querySelector('.edit-foreign').value.trim();
+    var s = r.querySelector('.edit-swedish').value.trim();
+    if (f && s) { words.push({ foreign: f, swedish: s }); }
+  });
+  if (!words.length) {
+    alert('Läxan måste ha minst ett ordpar med både det utländska och det svenska ordet. ✏️');
+    return;
+  }
+  var list = loadGlossaries();
+  var g = null;
+  for (var i = 0; i < list.length; i++) { if (list[i].id === editTargetId) { g = list[i]; break; } }
+  if (!g) { alert('Läxan kunde inte hittas.'); return; }
+  // Uppdatera på plats – id och createdAt bevaras, så ordningen i listan inte ändras
+  g.name = name;
+  g.language = language;
+  g.words = words;
+  saveGlossaries(list);
+  editTargetId = null;
+  showHome();
+}
+
+// ---------- Spelemeny ----------
+function showMenu() {
+  if (!state.current) { showHome(); return; }
+  document.getElementById('menu-name').textContent = '📚 ' + state.current.name;
+  document.getElementById('menu-info').textContent = 'Språk: ' + langLabel(state.current.language) + ' · ' + state.current.words.length + ' ord';
+  renderDirToggle();
+  showScreen('screen-menu');
+}
+
+function setDirection(d) {
+  state.direction = d;
+  renderDirToggle();
+}
+
+function renderDirToggle() {
+  var btns = document.querySelectorAll('.dir-btn');
+  btns.forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-dir') === state.direction); });
+}
+
+// ---------- Spelmöd 1: Klassiskt Förhör ----------
+function startClassic() {
+  var g = state.current;
+  var knownIsSv = (state.direction === 'sv2foreign'); // känd kolumn: svenskt, svar: utländskt
+  document.getElementById('classic-subtitle').textContent = knownIsSv
+    ? 'Läs det svenska ordet och skriv det utländska ordet.'
+    : 'Läs det utländska ordet och skriv det svenska ordet.';
+  var box = document.getElementById('classic-rows');
+  box.innerHTML = '';
+  var solved = 0;
+  g.words.forEach(function (w, i) {
+    var known = knownIsSv ? w.swedish : w.foreign;
+    var expected = knownIsSv ? w.foreign : w.swedish;
+    var row = document.createElement('div');
+    row.className = 'classic-row';
+    row.innerHTML = '<div class="classic-known">' + esc(known) + '</div>' +
+      '<div class="classic-answer">' +
+        '<input type="text" data-i="' + i + '" autocomplete="off" placeholder="Skriv ordet här...">' +
+        '<button class="btn speaker hidden" data-i="' + i + '" title="Läs högt" aria-label="Läs högt"></button>' +
+      '</div>';
+    box.appendChild(row);
+    var inp = row.querySelector('input');
+    var spk = row.querySelector('.speaker');
+    spk.innerHTML = SPEAKER_SVG;
+    inp.addEventListener('input', function () {
+      if (!inp.classList.contains('correct') && norm(inp.value) === norm(expected)) {
+        inp.classList.add('correct');
+        inp.readOnly = true;
+        spk.classList.remove('hidden');
+        solved++;
+        if (solved === g.words.length) { showClassicDone(); }
+      }
+    });
+    spk.addEventListener('click', function () { speak(w.foreign, g.language); });
+  });
+  var done = document.getElementById('classic-done');
+  done.classList.add('hidden');
+  done.textContent = '';
+  showScreen('screen-classic');
+}
+
+function showClassicDone() {
+  var d = document.getElementById('classic-done');
+  d.classList.remove('hidden');
+  d.textContent = '🎉 Klart! Du löste alla ord!';
+}
+
+function classicShowAll() {
+  var g = state.current;
+  var knownIsSv = (state.direction === 'sv2foreign');
+  g.words.forEach(function (w, i) {
+    var expected = knownIsSv ? w.foreign : w.swedish;
+    var inp = document.querySelector('#classic-rows input[data-i="' + i + '"]');
+    var spk = document.querySelector('#classic-rows .speaker[data-i="' + i + '"]');
+    if (inp && !inp.classList.contains('correct')) {
+      inp.value = expected;
+      inp.classList.add('correct');
+      inp.readOnly = true;
+      if (spk) { spk.classList.remove('hidden'); }
+    }
+  });
+  showClassicDone();
+}
+
+// ---------- Spelmöd 2: Flervalsquiz ----------
+var quiz = null;
+
+function startQuiz() {
+  quiz = {
+    order: shuffle(state.current.words.map(function (w, i) { return i; })),
+    index: 0,
+    score: 0,
+    firstTry: true,
+    locked: false
+  };
+  renderQuiz();
+  showScreen('screen-quiz');
+}
+
+function renderQuiz() {
+  var box = document.getElementById('quiz-area');
+  box.innerHTML = '';
+  if (quiz.index >= quiz.order.length) {
+    document.getElementById('quiz-progress').textContent = '';
+    box.innerHTML = '<div class="quiz-end-emoji">🏆</div>' +
+      '<h2>Klart!</h2>' +
+      '<p class="quiz-end-score">Du fick <b>' + quiz.score + ' av ' + quiz.order.length + '</b> rätt.</p>' +
+      '<div class="btn-row"><button id="quiz-restart" class="btn primary huge">Spela igen 🔄</button></div>';
+    document.getElementById('quiz-restart').onclick = startQuiz;
+    return;
+  }
+  var g = state.current;
+  var pairIdx = quiz.order[quiz.index];
+  var p = g.words[pairIdx];
+  var svPrompt = (state.direction === 'sv2foreign');
+  var prompt = svPrompt ? p.swedish : p.foreign;
+  var expected = svPrompt ? p.foreign : p.swedish;
+  document.getElementById('quiz-progress').textContent = 'Fråga ' + (quiz.index + 1) + ' av ' + quiz.order.length + ' · Rätt: ' + quiz.score;
+  var label = svPrompt
+    ? 'Vilket ' + langLabel(g.language).toLowerCase() + ' ord betyder detta?'
+    : 'Vad betyder detta ord på svenska?';
+  // Lockbiter: andra ord ur samma läxa, utan dubbletter
+  var decoys = [];
+  var seen = {};
+  seen[norm(expected)] = true;
+  var others = [];
+  g.words.forEach(function (w, i) {
+    if (i === pairIdx) { return; }
+    var cand = svPrompt ? w.foreign : w.swedish;
+    if (!seen[norm(cand)]) {
+      seen[norm(cand)] = true;
+      others.push(cand);
+    }
+  });
+  shuffle(others).slice(0, 3).forEach(function (c) { decoys.push(c); });
+  var choices = shuffle([expected].concat(decoys));
+  box.innerHTML = '<div class="quiz-prompt-label">' + esc(label) + '</div>' +
+    '<div class="quiz-prompt">' + esc(prompt) + '</div>' +
+    '<div class="quiz-choices"></div>';
+  var cbox = box.querySelector('.quiz-choices');
+  choices.forEach(function (c) {
+    var b = document.createElement('button');
+    b.className = 'quiz-answer';
+    b.textContent = c;
+    b.onclick = function () { quizAnswer(b, norm(c) === norm(expected)); };
+    cbox.appendChild(b);
+  });
+}
+
+function quizAnswer(btn, ok) {
+  if (!quiz || quiz.locked) { return; }
+  var g = state.current;
+  var p = g.words[quiz.order[quiz.index]];
+  if (ok) {
+    quiz.locked = true;
+    btn.classList.add('correct');
+    speak(p.foreign, g.language); // läser alltid det utländska ordet
+    if (quiz.firstTry) { quiz.score++; }
+    quiz.firstTry = false;
+    setTimeout(function () {
+      quiz.index++;
+      quiz.firstTry = true;
+      quiz.locked = false;
+      renderQuiz();
+    }, 1400);
+  } else {
+    btn.classList.add('wrong');
+    quiz.firstTry = false;
+    setTimeout(function () { btn.classList.remove('wrong'); }, 650);
+  }
+}
+
+// ---------- Spelmöd 3: Matcha Orden ----------
+var matchSel = null;
+var matchCount = 0;
+
+function startMatch() {
+  var g = state.current;
+  matchSel = null;
+  matchCount = 0;
+  document.getElementById('match-foreign-title').textContent = '🌍 ' + langLabel(g.language);
+  document.getElementById('match-done').classList.add('hidden');
+  var left = document.getElementById('match-swedish');
+  var right = document.getElementById('match-foreign');
+  left.innerHTML = '';
+  right.innerHTML = '';
+  // Oberoende slumpning av båda kolumnerna
+  shuffle(g.words.map(function (w, i) { return i; })).forEach(function (i) {
+    var b = document.createElement('button');
+    b.className = 'match-item';
+    b.setAttribute('data-idx', String(i));
+    b.setAttribute('data-col', 'sv');
+    b.textContent = g.words[i].swedish;
+    b.onclick = function () { matchClick(b); };
+    left.appendChild(b);
+  });
+  shuffle(g.words.map(function (w, i) { return i; })).forEach(function (i) {
+    var b = document.createElement('button');
+    b.className = 'match-item';
+    b.setAttribute('data-idx', String(i));
+    b.setAttribute('data-col', 'fo');
+    b.textContent = g.words[i].foreign;
+    b.onclick = function () { matchClick(b); };
+    right.appendChild(b);
+  });
+  showScreen('screen-match');
+}
+
+function matchClick(btn) {
+  if (btn.classList.contains('matched')) { return; }
+  if (!matchSel) {
+    matchSel = btn;
+    btn.classList.add('selected');
+    return;
+  }
+  if (matchSel === btn) {
+    btn.classList.remove('selected');
+    matchSel = null;
+    return;
+  }
+  if (matchSel.getAttribute('data-col') === btn.getAttribute('data-col')) {
+    matchSel.classList.remove('selected');
+    matchSel = btn;
+    btn.classList.add('selected');
+    return;
+  }
+  var a = matchSel;
+  var b = btn;
+  if (a.getAttribute('data-idx') === b.getAttribute('data-idx')) {
+    a.classList.remove('selected');
+    a.classList.add('matched');
+    b.classList.add('matched');
+    matchSel = null;
+    matchCount++;
+    speak(state.current.words[Number(a.getAttribute('data-idx'))].foreign, state.current.language);
+    if (matchCount === state.current.words.length) {
+      setTimeout(function () { document.getElementById('match-done').classList.remove('hidden'); }, 900);
+    }
+  } else {
+    a.classList.remove('selected');
+    a.classList.add('wrong');
+    b.classList.add('wrong');
+    matchSel = null;
+    setTimeout(function () {
+      a.classList.remove('wrong');
+      b.classList.remove('wrong');
+    }, 650);
+  }
+}
+
+// ---------- Spelmöd 4: Lyssna & Stava ----------
+var spell = null;
+
+function startSpell() {
+  spell = {
+    order: shuffle(state.current.words.map(function (w, i) { return i; })),
+    index: 0,
+    locked: false
+  };
+  renderSpell();
+  showScreen('screen-spell');
+}
+
+function renderSpell() {
+  var g = state.current;
+  var area = document.getElementById('spell-area');
+  var done = document.getElementById('spell-done');
+  var doneBtns = document.getElementById('spell-done-btns');
+  var prog = document.getElementById('spell-progress');
+  if (spell.index >= spell.order.length) {
+    prog.textContent = '';
+    area.classList.add('hidden');
+    done.classList.remove('hidden');
+    doneBtns.classList.remove('hidden');
+    return;
+  }
+  area.classList.remove('hidden');
+  done.classList.add('hidden');
+  doneBtns.classList.add('hidden');
+  var p = g.words[spell.order[spell.index]];
+  prog.textContent = 'Ordet ' + (spell.index + 1) + ' av ' + spell.order.length;
+  var svPrompt = (state.direction === 'sv2foreign'); // hörs: utländskt, stavas: utländskt, ledtråd: svenskt
+  var instr = document.getElementById('spell-instr');
+  var hint = document.getElementById('spell-hint');
+  var status = document.getElementById('spell-status');
+  status.classList.add('hidden');
+  status.textContent = '';
+  if (svPrompt) {
+    instr.textContent = 'Lyssna på ordet och skriv det på ' + langLabel(g.language).toLowerCase() + '.';
+    hint.classList.remove('hidden');
+    hint.textContent = '🔎 TIPS: ' + p.swedish;
+  } else {
+    instr.textContent = 'Lyssna noggrant på det utländska ordet och skriv den svenska översättningen nedan.';
+    hint.classList.add('hidden');
+    hint.textContent = '';
+  }
+  var inp = document.getElementById('spell-input');
+  inp.value = '';
+  inp.readOnly = false;
+  inp.disabled = false;
+  inp.classList.remove('correct');
+  inp.classList.remove('wrong');
+  spell.locked = false;
+  inp.focus();
+  // Läs högt ordet direkt, innan användaren skriver
+  var myIdx = spell.index;
+  speak(p.foreign, g.language, function (err) {
+    if (err && spell && spell.index === myIdx) {
+      var st = document.getElementById('spell-status');
+      st.textContent = '⚠️ Tyvärr – webbläsaren kunde inte läsa högt. Prova t.ex. Chrome eller Edge.';
+      st.classList.remove('hidden');
+    }
+  });
+}
+
+function stopSpeakBtn() {
+  var btn = document.getElementById('spell-listen');
+  btn.classList.remove('speaking');
+  btn.textContent = LISTEN_LABEL;
+}
+
+function spellListen() {
+  if (!spell || spell.index >= spell.order.length) { return; }
+  var g = state.current;
+  var word = g.words[spell.order[spell.index]].foreign;
+  var btn = document.getElementById('spell-listen');
+  var status = document.getElementById('spell-status');
+  status.classList.add('hidden');
+  btn.classList.add('speaking');
+  btn.textContent = '🔊 Pratar...';
+  speak(word, g.language, function (err) {
+    if (err) {
+      status.textContent = '⚠️ Tyvärr – webbläsaren kunde inte läsa högt. Prova t.ex. Chrome eller Edge.';
+      status.classList.remove('hidden');
+    }
+    stopSpeakBtn();
+  });
+  setTimeout(stopSpeakBtn, 6000);
+}
+
+function spellCheck(withFeedback) {
+  if (!spell || spell.locked || spell.index >= spell.order.length) { return; }
+  var g = state.current;
+  var p = g.words[spell.order[spell.index]];
+  var expected = (state.direction === 'sv2foreign') ? p.foreign : p.swedish;
+  var inp = document.getElementById('spell-input');
+  if (norm(inp.value) !== norm(expected)) {
+    if (withFeedback) {
+      inp.classList.add('wrong');
+      var status = document.getElementById('spell-status');
+      status.textContent = 'Hmmm, inte riktigt – försök igen! 💪';
+      status.classList.remove('hidden');
+      setTimeout(function () {
+        inp.classList.remove('wrong');
+        status.classList.add('hidden');
+      }, 1400);
+    }
+    return;
+  }
+  spell.locked = true;
+  inp.classList.add('correct');
+  inp.readOnly = true;
+  setTimeout(function () {
+    spell.index++;
+    renderSpell();
+  }, 1600);
+}
+
+// ---------- Starta appen ----------
+function init() {
+  document.getElementById('btn-create-new').onclick = showCreate;
+  document.getElementById('btn-export').onclick = exportGlossaries;
+  document.getElementById('btn-import').onclick = function () { document.getElementById('import-file').click(); };
+  document.getElementById('btn-toggle-archive').onclick = toggleArchive;
+  document.getElementById('import-file').addEventListener('change', function () { importGlossaries(); });
+  document.getElementById('create-add-row').onclick = addCreateRow;
+  document.getElementById('create-save').onclick = saveNewGlossary;
+  document.getElementById('create-cancel').onclick = showHome;
+  document.getElementById('edit-add-row').onclick = function () { addEditRow('', ''); };
+  document.getElementById('edit-save').onclick = saveEditedGlossary;
+  document.getElementById('edit-cancel').onclick = showHome;
+  document.getElementById('menu-to-home').onclick = showHome;
+  document.getElementById('btn-game-classic').onclick = startClassic;
+  document.getElementById('btn-game-quiz').onclick = startQuiz;
+  document.getElementById('btn-game-match').onclick = startMatch;
+  document.getElementById('btn-game-spell').onclick = startSpell;
+  document.getElementById('classic-show-all').onclick = classicShowAll;
+  document.getElementById('classic-back').onclick = showMenu;
+  document.getElementById('quiz-back').onclick = showMenu;
+  document.getElementById('match-back').onclick = showMenu;
+  document.getElementById('spell-back').onclick = showMenu;
+  document.getElementById('spell-listen').onclick = spellListen;
+  document.getElementById('spell-check-btn').onclick = function () { spellCheck(true); };
+  document.getElementById('spell-restart').onclick = startSpell;
+  var dirBtns = document.querySelectorAll('.dir-btn');
+  dirBtns.forEach(function (b) {
+    b.onclick = function () { setDirection(b.getAttribute('data-dir')); };
+  });
+  var si = document.getElementById('spell-input');
+  si.addEventListener('input', function () { spellCheck(false); });
+  si.addEventListener('keydown', function (e) { if (e.key === 'Enter') { spellCheck(true); } });
+  showHome();
+}
+
+init();
+</script>
+</body>
+</html>

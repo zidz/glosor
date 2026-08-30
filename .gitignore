@@ -1,0 +1,5 @@
+# Temporära/lokala filer
+*.tmp
+*.swp
+*~
+.DS_Store
