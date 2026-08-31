@@ -5,15 +5,17 @@ Läxor sparas lokalt i webbläsaren (localStorage). Ingen backend, ingen databas
 
 ## Funktioner
 
-- Skapa/ändra/radera läxor (namn + språk: engelska/tyska + ordpar)
+- Skapa/ändra/radera läxor (namn + språk: engelska/tyska/svenska)
+  - Engelska/Tyska: ordpar (utländska + svenska)
+  - Svenska: enstaka ord (inga par) – enda övningen är 🎧 Lyssna & Stava
 - Arkivera läxor (döljs från startsidan, återställbara, ingår i export)
 - Exportera/importera alla läxor som JSON-backup (import lägger till, samma namn ignoreras)
-- Fyra övningslägen:
+- Fyra övningslägen (engelska/tyska) / ett (svenska):
   - 🎯 Klassiskt Förhör
   - ❓ Flervalsquiz
   - 🧩 Matcha Orden
   - 🎧 Lyssna & Stava (ordet läses högt automatiskt innan skrivning)
-- Tal via Web Speech API (en-GB / de-DE)
+- Tal via Web Speech API (en-GB / de-DE / sv-SE)
 - Listan är sorterad nyast först; redigering bevarar ordning (createdAt)
 
 ## Filstruktur
