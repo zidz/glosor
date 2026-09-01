@@ -104,7 +104,7 @@ h2 { color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.2); }
 .classic-answer { display: flex; gap: 8px; align-items: center; }
 .classic-answer input { flex: 1; min-width: 0; font-size: 1.1rem; font-family: inherit; padding: 10px; border: 2px solid #e5e7eb; border-radius: 12px; }
 input.correct { background: var(--green-bg) !important; border-color: var(--green) !important; color: #166534; font-weight: 700; }
-.speaker { border: none; background: #dbeafe; border-radius: 50%; width: 44px; height: 44px; cursor: pointer; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; color: #1e40af; }
+.speaker { border: none; background: #dbeafe; border-radius: 50%; width: 44px; height: 44px; padding: 0; cursor: pointer; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; color: #1e40af; }
 .done-msg { text-align: center; font-size: 1.4rem; font-weight: 800; color: #166534; background: var(--green-bg); border-radius: 16px; padding: 14px; margin-top: 16px; }
 
 /* Quiz */
@@ -364,39 +364,86 @@ if ('speechSynthesis' in window) {
   window.speechSynthesis.onvoiceschanged = loadVoices;
 }
 
-// onDone(kallad med true om felet uppstod) ger synlig feedback även om ljudet inte fungerar
+// Tal-lås: ett ord spelar alltid upp till slut innan ett nytt ljud får starta.
+var ttsBusy = false;   // sant medan ett ord är igång
+var ttsWarm = false;   // motorn har växt upp med en tyst ljudbit
+var warmPending = null;
+
+// Väx upp tal-motorn med en tyst bit – gör att det första ordet inte blir
+// avklippt (kall start, vanligt i Chrome). cb() körs när det är klart.
+function ensureWarm(cb) {
+  if (!('speechSynthesis' in window)) { cb(); return; }
+  if (ttsWarm) { cb(); return; }
+  if (warmPending) { warmPending.push(cb); return; }
+  warmPending = [cb];
+  var done = false;
+  function fin() {
+    if (done) { return; }
+    done = true;
+    ttsWarm = true;
+    var cbs = warmPending; warmPending = null;
+    for (var i = 0; i < cbs.length; i++) { try { cbs[i](); } catch (e) {} }
+  }
+  try {
+    var p = new SpeechSynthesisUtterance(' ');
+    p.volume = 0;
+    p.onend = fin;
+    p.onerror = fin;
+    window.speechSynthesis.speak(p);
+  } catch (e) { fin(); }
+  setTimeout(fin, 250); // säkerhetsnät om onend aldrig blir utlöst
+}
+
+// onDone(kallad med true vid fel, 2 om ljudet ignoreras för att ett annat ord
+// redan spelades) ger synlig feedback även om ljudet inte fungerar
 function speak(word, lang, onDone) {
   if (!('speechSynthesis' in window)) {
     if (onDone) { onDone(true); }
     else { alert('Tyvärr kan din webbläsare inte läsa högt. Prova en modern webbläsare som Chrome eller Edge.'); }
     return;
   }
-  window.speechSynthesis.cancel();
-  var u = new SpeechSynthesisUtterance(word);
-  var cfg = (lang === 'de') ? { exact: 'de-de', prefix: 'de', code: 'de-DE' }
-    : (lang === 'sv') ? { exact: 'sv-se', prefix: 'sv', code: 'sv-SE' }
-    : { exact: 'en-gb', prefix: 'en', code: 'en-GB' };
-  var list = voices.length ? voices : window.speechSynthesis.getVoices();
-  var v = null;
-  for (var i = 0; i < list.length; i++) {
-    var vl = (list[i].lang || '').toLowerCase().replace('_', '-');
-    if (vl === cfg.exact) { v = list[i]; break; }
+  // Lås: ett pågående ord får alltid spela färdigt – nya tryck ignoreras
+  if (ttsBusy) {
+    if (onDone) { onDone(2); }
+    return;
   }
-  if (!v) {
-    for (var k = 0; k < list.length; k++) {
-      if ((list[k].lang || '').toLowerCase().replace('_', '-').indexOf(cfg.prefix) === 0) { v = list[k]; break; }
-    }
-  }
-  if (v) { u.voice = v; }
-  u.lang = cfg.code;
-  u.rate = 0.85;
-  var finished = false;
-  function fin(err) { if (!finished) { finished = true; if (onDone) { onDone(err); } } }
-  u.onend = function () { fin(false); };
-  u.onerror = function () { fin(true); };
-  window.speechSynthesis.speak(u);
-  // Säkerhetsnät: vissa webbläsare utlöser aldrig onend
-  setTimeout(function () { fin(false); }, (word.length * 250) + 2500);
+  ttsBusy = true;
+  ensureWarm(function () {
+    window.speechSynthesis.cancel();
+    // Liten paus efter cancel – annars klipper Chrome ofta bort början av ordet
+    setTimeout(function () {
+      var u = new SpeechSynthesisUtterance(word);
+      var cfg = (lang === 'de') ? { exact: 'de-de', prefix: 'de', code: 'de-DE' }
+        : (lang === 'sv') ? { exact: 'sv-se', prefix: 'sv', code: 'sv-SE' }
+        : { exact: 'en-gb', prefix: 'en', code: 'en-GB' };
+      var list = voices.length ? voices : window.speechSynthesis.getVoices();
+      var v = null;
+      for (var i = 0; i < list.length; i++) {
+        var vl = (list[i].lang || '').toLowerCase().replace('_', '-');
+        if (vl === cfg.exact) { v = list[i]; break; }
+      }
+      if (!v) {
+        for (var k = 0; k < list.length; k++) {
+          if ((list[k].lang || '').toLowerCase().replace('_', '-').indexOf(cfg.prefix) === 0) { v = list[k]; break; }
+        }
+      }
+      if (v) { u.voice = v; }
+      u.lang = cfg.code;
+      u.rate = 0.85;
+      var finished = false;
+      function fin(err) {
+        if (finished) { return; }
+        finished = true;
+        ttsBusy = false;
+        if (onDone) { onDone(err); }
+      }
+      u.onend = function () { fin(false); };
+      u.onerror = function () { fin(true); };
+      window.speechSynthesis.speak(u);
+      // Säkerhetsnät: vissa webbläsare utlöser aldrig onend
+      setTimeout(function () { fin(false); }, (word.length * 250) + 2500);
+    }, 80);
+  });
 }
 
 // ---------- Tillstånd ----------
@@ -1220,6 +1267,7 @@ function spellListen() {
   btn.classList.add('speaking');
   btn.textContent = '🔊 Pratar...';
   speak(word, g.language, function (err) {
+    if (err === 2) { return; } // ignoreras – ett ord är redan igång; det originalanropet stoppar knappen
     if (err) {
       status.textContent = '⚠️ Tyvärr – webbläsaren kunde inte läsa högt. Prova t.ex. Chrome eller Edge.';
       status.classList.remove('hidden');
