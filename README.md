@@ -1,6 +1,6 @@
 # Ordläxan (Ordövning)
 
-Enkelfladig webapp (vanilj HTML/CSS/JS) för att öva ord – byggd för barnen Katie och Charlie.
+Enkelfladig webapp (vanilj HTML/CSS/JS) för att öva glosor 
 Läxor sparas lokalt i webbläsaren (localStorage). Ingen backend, ingen databas.
 
 ## Funktioner
@@ -26,22 +26,6 @@ Läxor sparas lokalt i webbläsaren (localStorage). Ingen backend, ingen databas
 | `ordovning.service` | systemd-unit som serverar appen på port 8080 (manuell) |
 | `install.sh` | Installationsskript – skapar + startar systemd-unit automatiskt |
 
-## Deploy
-
-Deployas till `/root/ordovning/index.html` på barnens datorer och servas av `ordovning.service` (port **8080**):
-
-| Maskin | IP |
-|---|---|
-| Katie Pi | `10.2.1.2` |
-| Charlie Tower | `10.2.1.37` |
-
-Manuell deploy:
-
-```bash
-scp index.html root@10.2.1.2:/root/ordovning/index.html
-scp index.html root@10.2.1.37:/root/ordovning/index.html
-# http.server läser filen per request – ingen service-omstart behövs
-```
 
 ### Installation på en ny maskin
 
@@ -66,11 +50,9 @@ Miljövariabel: `ORDOVNING_PORT` (standard **8080**) för att byta port. Vanlig-
 Verifiering:
 
 ```bash
-ssh root@10.2.1.2 'systemctl is-active ordovning.service; curl -s -o /dev/null -w "%{http_code} %{size_download}\n" http://localhost:8080/'
+ssh root@[IP] 'systemctl is-active ordovning.service; curl -s -o /dev/null -w "%{http_code} %{size_download}\n" http://localhost:8080/'
 ```
 
 ## Utvecklingsnotering
 
 - Syntax-check innan deploy: extrahera `<script>`-delen och kör `node --check`
-- Kanonisk kopia: `/a0/usr/projects/Private/ordovning/` (detta repo)
-- Deployas via SSH (root) från Agent Zero

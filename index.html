@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ordläxan – Öva dina ord</title>
+<title>Glosor – av Zilux IT AB</title>
 <style>
 :root {
   --primary: #7c3aed;
@@ -31,6 +31,7 @@ body {
 h1 { text-align: center; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.25); }
 h2 { color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.2); }
 .subtitle { text-align: center; color: #fff; font-size: 1.1rem; margin: 4px 0 18px; }
+.subtitle a { color: #fff; }
 .card { background: #fff; border-radius: 20px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,.15); margin: 16px 0; }
 .btn {
   font-family: inherit; font-size: 1.05rem; font-weight: 700;
@@ -67,6 +68,9 @@ h2 { color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.2); }
 .glossary-edit { background: #dbeafe; color: #1e40af; font-size: 1rem; }
 .glossary-delete { background: var(--red-bg); color: var(--red); padding: 10px 12px; }
 .empty-msg { text-align: center; background: rgba(255,255,255,.8); border-radius: 16px; padding: 18px; font-size: 1.1rem; }
+.info-box { background: rgba(255,255,255,.92); border-radius: 16px; padding: 14px 18px; margin: 4px 0 16px; box-shadow: 0 5px 16px rgba(0,0,0,.14); text-align: center; }
+.info-box-title { font-weight: 800; font-size: 1.1rem; }
+.info-box p { margin: 6px 0 0; line-height: 1.55; color: #374151; }
 
 /* Skapa läxa / Ändra läxa */
 .field-label { display: block; font-weight: 700; margin: 12px 0 6px; }
@@ -155,8 +159,8 @@ input.wrong { border-color: var(--red) !important; background: var(--red-bg) !im
 
   <!-- STARTSKÄRM -->
   <section id="screen-home" class="screen">
-    <h1 class="app-title">📚 Ordläxan</h1>
-    <p class="subtitle">Öva dina ord på roliga sätt!</p>
+    <h1 class="app-title">📚 Glosor</h1>
+    <p class="subtitle"><a href="https://www.zilux.se" target="_blank" rel="noopener">av Zilux IT AB</a></p>
     <button id="btn-create-new" class="btn primary huge">➕ Skapa ny läxa</button>
     <div class="btn-row">
       <button id="btn-export" class="btn" title="Spara alla läxor som en backupfil (json)">⬇️ Exportera läxor</button>
@@ -164,6 +168,10 @@ input.wrong { border-color: var(--red) !important; background: var(--red-bg) !im
       <button id="btn-toggle-archive" class="btn" title="Visa eller dölj arkiverade läxor">📦 Visa arkiv</button>
     </div>
     <input type="file" id="import-file" accept=".json,application/json" class="hidden">
+    <div class="info-box">
+      <div class="info-box-title">Om Glosor</div>
+      <p>Glosor är en gratistjänst från Zilux IT AB. Inget sparas på Zilux IT's servrar.<br>Vill du kopiera dina läxor till flera enheter så exporterar du där du har din läxa och importerar på dina andra enheter.</p>
+    </div>
     <h2 id="home-heading">Sparade läxor</h2>
     <div id="home-list" class="home-list"></div>
   </section>
@@ -634,7 +642,7 @@ function toggleArchive() {
 }
 
 // ---------- Exportera / Importera (backup) ----------
-var EXPORT_FORMAT = 'ordlaexan';
+var EXPORT_FORMAT = 'glosor';
 
 function exportGlossaries() {
   var list = loadGlossaries();
@@ -649,7 +657,7 @@ function exportGlossaries() {
   };
   var d = new Date();
   function p2(n) { return (n < 10 ? '0' : '') + n; }
-  var fname = 'ordlaexan-backup-' + d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + '.json';
+  var fname = 'glosor-backup-' + d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + '.json';
   try {
     var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     var url = URL.createObjectURL(blob);
@@ -707,7 +715,7 @@ function importGlossaries() {
       } else if (Object.prototype.toString.call(data) === '[object Array]') {
         imported = data;
       } else {
-        alert('⚠️ Filen ser inte ut som en Ordläxan-backup (json).');
+        alert('⚠️ Filen ser inte ut som en Glosor-backup (json).');
         return;
       }
     } catch (e) {
