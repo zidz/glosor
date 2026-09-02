@@ -33,6 +33,9 @@ PYTHON_BIN="$(command -v python3 || true)"
 if [ ! -f "$APP_DIR/index.html" ]; then
   err "index.html hittades inte i $(pwd). Kör skriptet i den katalog där index.html ligger."
 fi
+if [ ! -f "$APP_DIR/server.py" ]; then
+  err "server.py hittades inte i $(pwd). Kör skriptet i den katalog där index.html och server.py ligger."
+fi
 
 # --- Bestäm om det är system- eller user-tjänst -----------------------------
 IS_ROOT=0
@@ -59,7 +62,8 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=$APP_DIR
-ExecStart=$PYTHON_BIN -m http.server $PORT --bind 0.0.0.0 --directory $APP_DIR
+Environment=ORDOVNING_PORT=$PORT
+ExecStart=$PYTHON_BIN $APP_DIR/server.py
 Restart=on-failure
 RestartSec=3
 
@@ -106,6 +110,7 @@ case "$CMD" in
     [ -n "$LOCAL_IP" ] && echo "    Adress:     http://$LOCAL_IP:$PORT"
     echo "    Status:     ${SC[*]} status $UNIT_NAME"
     echo "    Logg:       ${SC[*]} cat -n $UNIT_NAME"
+    echo "    Användning: tail -f $APP_DIR/användningslogg.txt"
     ;;
 
   stop)

@@ -3,3 +3,6 @@
 *.swp
 *~
 .DS_Store
+
+# Användningslogg (innehåller IP:an)
+användningslogg.txt

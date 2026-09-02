@@ -23,13 +23,26 @@ Läxor sparas lokalt i webbläsaren (localStorage). Ingen backend, ingen databas
 | Fil | Beskrivning |
 |---|---|
 | `index.html` | Hela appen (HTML+CSS+JS i en fil) |
+| `server.py` | HTTP-server (python) som serverar appen och loggar användning |
+| `användningslogg.txt` | Logg över användning: `<tidpunkt> <IP> <funktion>` (skapas vid körning) |
 | `ordovning.service` | systemd-unit som serverar appen på port 8080 (manuell) |
 | `install.sh` | Installationsskript – skapar + startar systemd-unit automatiskt |
+
+## Loggning
+
+Varje sidvisning och vald funktion (skapa/ändra/spara/ta bort läxa, arkivera, spel, export, import)
+loggas av `server.py` som en rad i `användningslogg.txt` i appens katalog:
+
+```
+2026-09-02T14:33:01 10.2.1.5 öppna_läxa
+```
+
+Följ loggen med `tail -f användningslogg.txt`.
 
 
 ### Installation på en ny maskin
 
-Kopiera över `index.html` + `install.sh` till en katalog, gå dit och kör:
+Kopiera över `index.html` + `server.py` + `install.sh` till en katalog, gå dit och kör:
 
 ```bash
 cd /sökväg/till/ordovning    # katalogen som innehåller index.html
