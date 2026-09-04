@@ -171,7 +171,7 @@ input.wrong { border-color: var(--red) !important; background: var(--red-bg) !im
     <input type="file" id="import-file" accept=".json,application/json" class="hidden">
     <div class="info-box">
       <div class="info-box-title">Om Glosor</div>
-      <p>Glosor är en gratistjänst från Zilux IT AB. Dina läxor sparas bara i din webläsare, inte på våra servrar. Vi loggar besök för att se hur mycket tjänsten används, och det hjälper oss att vidareutveckla och underhålla sidan.<br>Vill du ha dina läxor på flera enheter? Exportera dem där du har dem, och importera dem på dina andra enheter.</p>
+      <p>Glosor är en gratistjänst från Zilux IT AB. Dina läxor sparas bara i din webläsare, inte på våra servrar.<br>Vill du ha dina läxor på flera enheter? Exportera dem där du har dem, och importera dem på dina andra enheter.<br>Vi loggar besök för att se hur mycket tjänsten används, och det hjälper oss att vidareutveckla och underhålla sidan.</p>
     </div>
     <h2 id="home-heading">Sparade läxor</h2>
     <div id="home-list" class="home-list"></div>
@@ -181,14 +181,14 @@ input.wrong { border-color: var(--red) !important; background: var(--red-bg) !im
   <section id="screen-create" class="screen">
     <h1>➕ Skapa ny läxa</h1>
     <div class="card">
-      <label class="field-label" for="create-name">Namn på läxan</label>
-      <input id="create-name" type="text" placeholder="t.ex. Engelska vecka 35">
       <label class="field-label" for="create-lang">Målspråk</label>
       <select id="create-lang">
         <option value="en">Engelska</option>
         <option value="de">Tyska</option>
         <option value="sv">Svenska</option>
       </select>
+      <label class="field-label" for="create-name">Namn på läxan</label>
+      <input id="create-name" type="text" placeholder="t.ex. Engelska vecka 35">
       <div class="create-head" id="create-head">
         <span class="col-head" id="create-head-f">🌍 Utländskt ord</span>
         <span class="col-head" id="create-head-s">🇸🇪 Svenskt ord</span>
@@ -242,7 +242,7 @@ input.wrong { border-color: var(--red) !important; background: var(--red-bg) !im
       <button class="btn dir-btn" data-dir="foreign2sv">Utländskt ➔ Svenska</button>
     </div>
     <div class="game-grid" id="game-grid">
-      <button id="btn-game-classic" class="btn game-btn">🎯 Klassiskt Förhör<span class="game-btn-tip">Måste kunna betyden och stavning.</span></button>
+      <button id="btn-game-classic" class="btn game-btn">🎯 Klassiskt Förhör<span class="game-btn-tip">Måste kunna översättningen och stavningen.</span></button>
       <button id="btn-game-quiz" class="btn game-btn">❓ Flervalsquiz<span class="game-btn-tip">När orden börjar sätta sig, men du är osäker.</span></button>
       <button id="btn-game-match" class="btn game-btn">🧩 Matcha Orden<span class="game-btn-tip">För helt nya ord – lära dig känna igen dem.</span></button>
       <button id="btn-game-spell" class="btn game-btn">🎧 Lyssna &amp; Stava<span class="game-btn-tip">Lär dig ordet uppläst och öva stavningen.</span></button>
@@ -520,6 +520,14 @@ function langLabel(l) { return (l === 'de') ? 'Tyska' : (l === 'sv') ? 'Svenska'
 function langAdj(l) { return (l === 'de') ? 'tysk' : (l === 'sv') ? 'svensk' : 'engelsk'; }
 function langEmoji(l) { return (l === 'de') ? '🇩🇪' : (l === 'sv') ? '🇸🇪' : '🇬🇧'; }
 
+function isoWeek(date) {
+  var d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  var dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+}
+
 // ---------- Navigation ----------
 function showScreen(id) {
   var screens = document.querySelectorAll('.screen');
@@ -778,10 +786,17 @@ function importGlossaries() {
 }
 
 // ---------- Skapa ny läxa ----------
+var createNameTouched = false;
+
+function defaultCreateName() {
+  return langLabel(document.getElementById('create-lang').value) + ' vecka ' + isoWeek(new Date());
+}
+
 function showCreate() {
   logFeature('skapa_ny_läxa');
-  document.getElementById('create-name').value = '';
+  createNameTouched = false;
   document.getElementById('create-lang').value = 'en';
+  document.getElementById('create-name').value = defaultCreateName();
   var rowsBox = document.getElementById('create-rows');
   rowsBox.innerHTML = '';
   for (var i = 0; i < 3; i++) { addCreateRow(); }
@@ -1393,7 +1408,11 @@ function init() {
   document.getElementById('btn-toggle-archive').onclick = toggleArchive;
   document.getElementById('import-file').addEventListener('change', function () { importGlossaries(); });
   document.getElementById('create-add-row').onclick = function () { addCreateRow(); };
-  document.getElementById('create-lang').addEventListener('change', applyCreateLang);
+  document.getElementById('create-lang').addEventListener('change', function () {
+    applyCreateLang();
+    if (!createNameTouched) { document.getElementById('create-name').value = defaultCreateName(); }
+  });
+  document.getElementById('create-name').addEventListener('input', function () { createNameTouched = true; });
   document.getElementById('create-save').onclick = saveNewGlossary;
   document.getElementById('create-cancel').onclick = showHome;
   document.getElementById('edit-add-row').onclick = function () { addEditRow('', ''); };
