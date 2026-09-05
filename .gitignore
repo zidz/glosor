@@ -6,3 +6,6 @@
 
 # Användningslogg (innehåller IP:an)
 användningslogg.txt
+
+# Sekret för loggcookie (måste aldrig commitas)
+.log_secret
