@@ -191,6 +191,7 @@ h2 { color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.2); text-align: center; }
 .classic-known { font-size: 1.25rem; font-weight: 700; }
 .classic-answer { display: flex; gap: 8px; align-items: center; }
 .classic-answer input { flex: 1; min-width: 0; font-size: 1.1rem; font-family: inherit; padding: 10px; border: 2px solid var(--border); border-radius: 12px; }
+.classic-show { font-size: .9rem; padding: 8px 12px; background: var(--blue-soft); color: var(--blue-ink); flex: 0 0 auto; }
 input.correct { background: var(--green-bg) !important; border-color: var(--green) !important; color: var(--green-ink); font-weight: 700; }
 .speaker { border: none; background: var(--blue-soft); border-radius: 50%; width: 44px; height: 44px; padding: 0; cursor: pointer; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; color: var(--blue-ink); }
 .done-msg { text-align: center; font-size: 1.4rem; font-weight: 800; color: var(--green-ink); background: var(--green-bg); border-radius: 16px; padding: 14px; margin-top: 16px; }
@@ -1193,8 +1194,9 @@ function startClassic() {
     : 'Läs det utländska ordet och skriv det svenska ordet.';
   var box = document.getElementById('classic-rows');
   box.innerHTML = '';
-  var solved = 0;
-  g.words.forEach(function (w, i) {
+  var order = shuffle(g.words.map(function (w, i) { return i; }));
+  order.forEach(function (i) {
+    var w = g.words[i];
     var known = knownIsSv ? w.swedish : w.foreign;
     var expected = knownIsSv ? w.foreign : w.swedish;
     var row = document.createElement('div');
@@ -1203,21 +1205,24 @@ function startClassic() {
       '<div class="classic-answer">' +
         '<input type="text" data-i="' + i + '" autocomplete="off" placeholder="Skriv ordet här...">' +
         '<button class="btn speaker hidden" data-i="' + i + '" title="Läs högt" aria-label="Läs högt"></button>' +
+        '<button class="btn classic-show" data-i="' + i + '" title="Visa ordet" aria-label="Visa ordet">👁️ Visa</button>' +
       '</div>';
     box.appendChild(row);
     var inp = row.querySelector('input');
     var spk = row.querySelector('.speaker');
+    var showBtn = row.querySelector('.classic-show');
     spk.innerHTML = SPEAKER_SVG;
     inp.addEventListener('input', function () {
       if (!inp.classList.contains('correct') && norm(inp.value) === norm(expected)) {
         inp.classList.add('correct');
         inp.readOnly = true;
         spk.classList.remove('hidden');
-        solved++;
-        if (solved === g.words.length) { showClassicDone(); }
+        showBtn.classList.add('hidden');
+        classicCheckDone();
       }
     });
     spk.addEventListener('click', function () { speak(w.foreign, g.language); });
+    showBtn.addEventListener('click', function () { classicReveal(i); });
   });
   var done = document.getElementById('classic-done');
   done.classList.add('hidden');
@@ -1231,21 +1236,35 @@ function showClassicDone() {
   d.textContent = '🎉 Klart! Du löste alla ord!';
 }
 
-function classicShowAll() {
+function classicCheckDone() {
+  var all = document.querySelectorAll('#classic-rows input[data-i]');
+  for (var k = 0; k < all.length; k++) {
+    if (!all[k].classList.contains('correct')) { return; }
+  }
+  showClassicDone();
+}
+
+function classicReveal(i) {
   var g = state.current;
   var knownIsSv = (state.direction === 'sv2foreign');
-  g.words.forEach(function (w, i) {
-    var expected = knownIsSv ? w.foreign : w.swedish;
-    var inp = document.querySelector('#classic-rows input[data-i="' + i + '"]');
-    var spk = document.querySelector('#classic-rows .speaker[data-i="' + i + '"]');
-    if (inp && !inp.classList.contains('correct')) {
-      inp.value = expected;
-      inp.classList.add('correct');
-      inp.readOnly = true;
-      if (spk) { spk.classList.remove('hidden'); }
-    }
-  });
-  showClassicDone();
+  var w = g.words[i];
+  var expected = knownIsSv ? w.foreign : w.swedish;
+  var inp = document.querySelector('#classic-rows input[data-i="' + i + '"]');
+  var spk = document.querySelector('#classic-rows .speaker[data-i="' + i + '"]');
+  var showBtn = document.querySelector('#classic-rows .classic-show[data-i="' + i + '"]');
+  if (inp && !inp.classList.contains('correct')) {
+    inp.value = expected;
+    inp.classList.add('correct');
+    inp.readOnly = true;
+    if (spk) { spk.classList.remove('hidden'); }
+    if (showBtn) { showBtn.classList.add('hidden'); }
+    classicCheckDone();
+  }
+}
+
+function classicShowAll() {
+  var g = state.current;
+  for (var i = 0; i < g.words.length; i++) { classicReveal(i); }
 }
 
 // ---------- Spelmöd 2: Flervalsquiz ----------
