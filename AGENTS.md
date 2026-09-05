@@ -6,13 +6,13 @@
 
 | Fil | Beskrivning |
 |---|---|
-| `index.html` | Hela appen: HTML + CSS + JS i en enda fil (JS i ett enda `<script>`-block) |
+| `index.html` | Hela appen: HTML + CSS + JS i en enda fil (JS i huvudskriptet; **undantag:** ett litet skript i `<head>` som tillämpar sparad bakgrund/läge innan måling) |
 | `server.py` | HTTP-server (endast Python standardbibliotek) som servar appen + loggar användning |
 | `användningslogg.txt` | Användningslogg `<tidpunkt> <IP> <funktion>` (gitignored, innehåller IP) |
 | `.log_secret` | Hemmelighet för logg-cookies (gitignored, **får aldrig commitas**, skapas automatiskt) |
 | `install.sh` / `ordovning.service` | systemd-installation (port via `ORDOVNING_PORT`, standard 8080) |
 
-Data sparas klient-sida i `localStorage` (`ordlaexan_glossaries`).
+Data sparas klient-sida i `localStorage` (`ordlaexan_glossaries`; tema: `glosor_theme` = `{"mode":"light"|"dark","bg":0-5}`, standard = dagläge + bakgrund 0).
 
 ## Konventioner
 
@@ -38,11 +38,12 @@ README:et nämner `node --check`; på denna maskin används esprima i en venv:
 ```bash
 python3 -m venv /tmp/opencode/venv   # en gång
 /tmp/opencode/venv/bin/pip install esprima
-# Extrahera <script>-blocket ur index.html och pars:
+# Parsa alla <script>-block ur index.html (det lilla i <head> + huvudskriptet):
 /tmp/opencode/venv/bin/python -c "
 import re, esprima
 html = open('index.html', encoding='utf-8').read()
-esprima.parseScript(re.search(r'<script>(.*?)</script>', html, re.S).group(1), {'tolerant': False})
+for m in re.finditer(r'<script>(.*?)</script>', html, re.S):
+    esprima.parseScript(m.group(1), {'tolerant': False})
 print('OK')"
 ```
 
