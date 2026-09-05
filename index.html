@@ -21,9 +21,9 @@
   --panel: rgba(255,255,255,.92);
   --panel-soft: rgba(255,255,255,.8);
   --btn-bg: #fff;
+  --input-bg: #fff;
   --blue-soft: #dbeafe;
   --blue-ink: #1e40af;
-  --indigo-soft: #eef2ff;
   --amber-soft: #fef3c7;
   --amber-ink: #92400e;
   --green-ink: #166534;
@@ -60,7 +60,6 @@
   --btn-bg: #334155;
   --blue-soft: #1e3a5f;
   --blue-ink: #93c5fd;
-  --indigo-soft: #1e1b4b;
   --amber-soft: #451a03;
   --amber-ink: #fcd34d;
   --green-ink: #86efac;
@@ -159,13 +158,13 @@ h2 { color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.2); text-align: center; }
 .field-label { display: block; font-weight: 700; margin: 12px 0 6px; }
 #screen-create input[type=text], #screen-create select,
 #screen-edit input[type=text], #screen-edit select {
-  width: 100%; font-size: 1.1rem; font-family: inherit; padding: 12px; border: 2px solid var(--border); border-radius: 12px; background: var(--card-bg);
+  width: 100%; font-size: 1.1rem; font-family: inherit; padding: 12px; border: 2px solid var(--border); border-radius: 12px; background: var(--input-bg);
 }
 .create-head { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
 .col-head { font-weight: 800; }
 .create-rows { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
 .create-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.create-row input, .edit-row input { font-size: 1.05rem; font-family: inherit; padding: 10px; border: 2px solid var(--border); border-radius: 12px; background: var(--card-bg); }
+.create-row input, .edit-row input { font-size: 1.05rem; font-family: inherit; padding: 10px; border: 2px solid var(--border); border-radius: 12px; background: var(--input-bg); }
 .edit-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: center; }
 .create-head.single { display: block; }
 .create-row.single { grid-template-columns: 1fr; }
@@ -200,8 +199,9 @@ input.correct { background: var(--green-bg) !important; border-color: var(--gree
 #quiz-area { background: var(--card-bg); border-radius: 20px; padding: 24px; box-shadow: 0 8px 24px rgba(0,0,0,.15); text-align: center; min-height: 260px; margin-bottom: 6px; }
 .quiz-prompt-label { color: var(--muted); font-weight: 700; }
 .quiz-prompt { font-size: 2.4rem; font-weight: 900; margin: 10px 0 22px; color: var(--primary); }
+:root[data-mode="dark"] .quiz-prompt { color: #fff; }
 .quiz-choices { display: flex; flex-direction: column; gap: 12px; max-width: 480px; margin: 0 auto; }
-.quiz-answer { font-size: 1.3rem; font-weight: 700; padding: 16px; border-radius: 16px; background: var(--indigo-soft); border: 3px solid transparent; cursor: pointer; }
+.quiz-answer { font-size: 1.3rem; font-weight: 700; padding: 16px; border-radius: 16px; background: var(--input-bg); border: 3px solid transparent; cursor: pointer; }
 .quiz-answer.correct { background: var(--green-bg); border-color: var(--green); color: var(--green-ink); }
 .quiz-answer.wrong { background: var(--red-bg); border-color: var(--red); color: var(--red-ink); animation: shake .4s; }
 @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
@@ -212,7 +212,7 @@ input.correct { background: var(--green-bg) !important; border-color: var(--gree
 .match-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .match-col { background: var(--panel-soft); border-radius: 16px; padding: 14px; }
 .match-col h3 { text-align: center; margin: 4px 0 12px; }
-.match-item { display: block; width: 100%; margin-bottom: 10px; padding: 13px; font-size: 1.15rem; font-weight: 700; font-family: inherit; border-radius: 12px; border: 3px solid var(--border); background: var(--card-bg); cursor: pointer; transition: all .12s; }
+.match-item { display: block; width: 100%; margin-bottom: 10px; padding: 13px; font-size: 1.15rem; font-weight: 700; font-family: inherit; border-radius: 12px; border: 3px solid var(--border); background: var(--input-bg); cursor: pointer; transition: all .12s; }
 .match-item.selected { border-color: var(--accent); background: var(--amber-soft); transform: scale(1.03); }
 .match-item.matched { background: var(--green-bg); border-color: var(--green); color: var(--green-ink); cursor: default; opacity: .85; }
 .match-item.wrong { background: var(--red-bg); border-color: var(--red); animation: shake .4s; }
