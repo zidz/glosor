@@ -216,6 +216,8 @@ input.correct { background: var(--green-bg) !important; border-color: var(--gree
 .match-item.selected { border-color: var(--accent); background: var(--amber-soft); transform: scale(1.03); }
 .match-item.matched { background: var(--green-bg); border-color: var(--green); color: var(--green-ink); cursor: default; opacity: .85; }
 .match-item.wrong { background: var(--red-bg); border-color: var(--red); animation: shake .4s; }
+.match-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.match-row .match-item { flex: 1; margin-bottom: 0; }
 
 /* Lyssna & stava */
 .spell-card { text-align: center; }
@@ -227,6 +229,8 @@ input.correct { background: var(--green-bg) !important; border-color: var(--gree
 @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
 .spell-input-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 #spell-input { font-size: 1.2rem; font-family: inherit; padding: 12px 16px; border: 2px solid var(--border); border-radius: 14px; width: min(320px, 70vw); text-align: center; }
+.spell-mask { font-family: 'Courier New', Courier, monospace; font-size: 1.6rem; font-weight: 700; letter-spacing: .3em; padding-left: .3em; margin: 2px 0 16px; min-height: 2.2em; color: var(--muted); }
+.spell-mask-on { color: var(--green-ink); }
 input.wrong { border-color: var(--red) !important; background: var(--red-bg) !important; animation: shake .4s; }
 .spell-status { font-size: 1.05rem; font-weight: 700; color: var(--red-ink); background: var(--red-bg); border-radius: 12px; padding: 8px 14px; margin: 8px auto; max-width: 480px; }
 .voice-warn { font-size: 1rem; font-weight: 700; color: var(--amber-ink); background: var(--amber-soft); border: 2px solid var(--accent); border-radius: 12px; padding: 10px 14px; margin: 8px auto; max-width: 480px; }
@@ -356,7 +360,7 @@ input.wrong { border-color: var(--red) !important; background: var(--red-bg) !im
       <button id="btn-game-classic" class="btn game-btn">🎯 Klassiskt Förhör<span class="game-btn-tip">Måste kunna översättningen och stavningen.</span></button>
       <button id="btn-game-quiz" class="btn game-btn">❓ Flervalsquiz<span class="game-btn-tip">När orden börjar sätta sig, men du är osäker.</span></button>
       <button id="btn-game-match" class="btn game-btn">🧩 Matcha Orden<span class="game-btn-tip">För helt nya ord – lära dig känna igen dem.</span></button>
-      <button id="btn-game-spell" class="btn game-btn">🎧 Lyssna &amp; Stava<span class="game-btn-tip">Lär dig ordet uppläst och öva stavningen.</span></button>
+      <button id="btn-game-spell" class="btn game-btn">🎧 Lyssna &amp; Stava<span class="game-btn-tip">Få orden upplästa och öva på stavningen.</span></button>
     </div>
     <button id="menu-to-home" class="btn home-link">🏠 Till startsidan</button>
   </section>
@@ -407,6 +411,7 @@ input.wrong { border-color: var(--red) !important; background: var(--red-bg) !im
       <p id="spell-instr" class="spell-instr"></p>
       <p id="spell-hint" class="spell-hint hidden"></p>
       <button id="spell-listen" class="btn primary huge listen-btn">🔊 Lyssna</button>
+      <div id="spell-mask" class="spell-mask" aria-hidden="true"></div>
       <div class="spell-input-row">
         <input id="spell-input" type="text" autocomplete="off" placeholder="Stava ordet här...">
         <button id="spell-check-btn" class="btn">Kolla ✔</button>
@@ -1382,13 +1387,23 @@ function startMatch() {
     left.appendChild(b);
   });
   shuffle(g.words.map(function (w, i) { return i; })).forEach(function (i) {
+    var row = document.createElement('div');
+    row.className = 'match-row';
     var b = document.createElement('button');
     b.className = 'match-item';
     b.setAttribute('data-idx', String(i));
     b.setAttribute('data-col', 'fo');
     b.textContent = g.words[i].foreign;
     b.onclick = function () { matchClick(b); };
-    right.appendChild(b);
+    var spk = document.createElement('button');
+    spk.className = 'speaker';
+    spk.setAttribute('title', 'Läs högt');
+    spk.setAttribute('aria-label', 'Läs högt');
+    spk.innerHTML = SPEAKER_SVG;
+    spk.onclick = function () { speak(g.words[i].foreign, g.language); };
+    row.appendChild(b);
+    row.appendChild(spk);
+    right.appendChild(row);
   });
   showScreen('screen-match');
 }
@@ -1449,6 +1464,32 @@ function startSpell() {
   showScreen('screen-spell');
 }
 
+function spellExpected() {
+  var g = state.current;
+  var p = g.words[spell.order[spell.index]];
+  return (g.language === 'sv') ? p.word : ((state.direction === 'sv2foreign') ? p.foreign : p.swedish);
+}
+
+// Visa ordet som "___" (mellanslag kvar som mellanslag); rätt stavade bokstäver ersätter "_"
+function renderSpellMask() {
+  var el = document.getElementById('spell-mask');
+  if (!el) { return; }
+  if (!spell || spell.index >= spell.order.length) { el.innerHTML = ''; return; }
+  var expected = spellExpected();
+  var typed = document.getElementById('spell-input').value.trim().toLowerCase();
+  var html = '';
+  for (var i = 0; i < expected.length; i++) {
+    var ch = expected.charAt(i);
+    if (ch === ' ') { html += '&nbsp;'; continue; }
+    if (typed.charAt(i) === ch.toLowerCase()) {
+      html += '<span class="spell-mask-on">' + esc(ch) + '</span>';
+    } else {
+      html += '_';
+    }
+  }
+  el.innerHTML = html;
+}
+
 function renderSpell() {
   var g = state.current;
   var area = document.getElementById('spell-area');
@@ -1496,6 +1537,7 @@ function renderSpell() {
   inp.classList.remove('correct');
   inp.classList.remove('wrong');
   spell.locked = false;
+  renderSpellMask();
   inp.focus();
   // Läs högt ordet direkt, innan användaren skriver
   var myIdx = spell.index;
@@ -1537,10 +1579,7 @@ function spellListen() {
 
 function spellCheck(withFeedback) {
   if (!spell || spell.locked || spell.index >= spell.order.length) { return; }
-  var g = state.current;
-  var p = g.words[spell.order[spell.index]];
-  var expected = (g.language === 'sv') ? p.word
-    : ((state.direction === 'sv2foreign') ? p.foreign : p.swedish);
+  var expected = spellExpected();
   var inp = document.getElementById('spell-input');
   if (norm(inp.value) !== norm(expected)) {
     if (withFeedback) {
@@ -1601,7 +1640,7 @@ function init() {
     b.onclick = function () { setDirection(b.getAttribute('data-dir')); };
   });
   var si = document.getElementById('spell-input');
-  si.addEventListener('input', function () { spellCheck(false); });
+  si.addEventListener('input', function () { spellCheck(false); renderSpellMask(); });
   si.addEventListener('keydown', function (e) { if (e.key === 'Enter') { spellCheck(true); } });
   var theme = loadTheme();
   applyTheme(theme);
