@@ -36,6 +36,8 @@ FEATURES = {
     "flervalsquiz",
     "matcha_orden",
     "lyssna_och_stava",
+    "dela_läxa",
+    "importera_url",
 }
 RATE_LIMIT = 120  # loggeven per timme per IP
 RATE_WINDOW = 3600
