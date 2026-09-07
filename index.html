@@ -244,12 +244,11 @@ input.correct { background: var(--green-bg) !important; border-color: var(--gree
 /* Lyssna & stava */
 .spell-card { text-align: center; }
 .spell-instr { font-size: 1.2rem; font-weight: 700; }
-.spell-hint { font-size: 1.3rem; background: var(--amber-soft); border-radius: 12px; padding: 10px; margin: 12px 0; }
-.spell-tip { color: var(--muted); font-size: .95rem; margin-top: 10px; }
-.listen-btn { font-size: 1.6rem; padding: 18px 44px; margin: 12px auto; display: inline-block; }
+.spell-hint { font-size: 2.4rem; font-weight: 800; background: var(--amber-soft); border-radius: 12px; padding: 12px; margin: 12px 0; word-break: break-word; }
+.spell-btn-row { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 12px 0; }
+.listen-btn { font-size: 1.6rem; padding: 18px 44px; }
 .listen-btn.speaking { background: var(--accent); animation: pulse 1s infinite; }
 @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-.spell-input-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 #spell-input { font-size: 1.2rem; font-family: inherit; padding: 12px 16px; border: 2px solid var(--border); border-radius: 14px; width: min(320px, 70vw); text-align: center; }
 .spell-mask { font-family: 'Courier New', Courier, monospace; font-size: 1.6rem; font-weight: 700; letter-spacing: .3em; padding-left: .3em; margin: 2px 0 16px; min-height: 2.2em; color: var(--muted); }
 .spell-mask-on { color: var(--green-ink); }
@@ -432,15 +431,14 @@ input.wrong { border-color: var(--red) !important; background: var(--red-bg) !im
     <div id="spell-area" class="card spell-card">
       <p id="spell-instr" class="spell-instr"></p>
       <p id="spell-hint" class="spell-hint hidden"></p>
-      <button id="spell-listen" class="btn primary huge listen-btn">🔊 Lyssna</button>
-      <div id="spell-mask" class="spell-mask" aria-hidden="true"></div>
-      <div class="spell-input-row">
-        <input id="spell-input" type="text" autocomplete="off" placeholder="Stava ordet här...">
-        <button id="spell-show-btn" class="btn">Visa ord</button>
+      <div class="spell-btn-row">
+        <button id="spell-listen" class="btn primary huge listen-btn">🔊 Lyssna</button>
+        <button id="spell-show-btn" class="btn huge listen-btn">Visa ord</button>
       </div>
+      <div id="spell-mask" class="spell-mask" aria-hidden="true"></div>
+      <input id="spell-input" type="text" autocomplete="off" placeholder="Stava ordet här...">
       <p id="spell-voice-warn" class="voice-warn hidden"></p>
       <p id="spell-status" class="spell-status hidden"></p>
-      <p class="spell-tip">Tips: Tryck på "Lyssna" så många gånger du vill!</p>
     </div>
     <p id="spell-done" class="done-msg hidden">🎉 Klart! Du stavade alla ord rätt!</p>
     <div id="spell-done-btns" class="btn-row hidden">
@@ -1815,9 +1813,9 @@ function renderSpell() {
     hint.classList.add('hidden');
     hint.textContent = '';
   } else if (svPrompt) {
-    instr.textContent = 'Lyssna på ordet och skriv det på ' + langLabel(g.language).toLowerCase() + '.';
+    instr.textContent = 'Skriv följande ord på ' + langLabel(g.language).toLowerCase() + '.';
     hint.classList.remove('hidden');
-    hint.textContent = '🔎 TIPS: ' + p.swedish;
+    hint.textContent = p.swedish;
   } else {
     instr.textContent = 'Lyssna noggrant på det utländska ordet och skriv den svenska översättningen nedan.';
     hint.classList.add('hidden');
@@ -1832,15 +1830,7 @@ function renderSpell() {
   spell.locked = false;
   renderSpellMask();
   inp.focus();
-  // Läs högt ordet direkt, innan användaren skriver
-  var myIdx = spell.index;
-  speak(svMode ? p.word : p.foreign, g.language, function (err) {
-    if (err && spell && spell.index === myIdx) {
-      var st = document.getElementById('spell-status');
-      st.textContent = '⚠️ Tyvärr – webbläsaren kunde inte läsa högt. Prova t.ex. Chrome eller Edge.';
-      st.classList.remove('hidden');
-    }
-  });
+  // Ljudet spelas inte upp automatiskt – "Lyssna" är ett hjälpmedel
 }
 
 function stopSpeakBtn() {
