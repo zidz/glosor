@@ -130,6 +130,18 @@ h2 { color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.2); text-align: center; }
 .info-box-title { font-weight: 800; font-size: 1.1rem; }
 .info-box p { margin: 6px 0 0; line-height: 1.55; color: var(--info-text); }
 
+/* Delad läxa (import via länk) */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, .55); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+.share-modal { background: var(--card-bg); border-radius: 20px; padding: 22px; width: min(560px, 100%); max-height: 88vh; overflow-y: auto; box-shadow: 0 12px 32px rgba(0,0,0,.3); }
+.share-modal h3 { margin: 0 0 8px; text-align: center; font-size: 1.4rem; }
+.share-modal-name { font-size: 1.4rem; font-weight: 800; text-align: center; word-break: break-word; }
+.share-modal-meta { color: var(--muted); text-align: center; margin: 4px 0 14px; }
+.share-words { background: var(--panel-soft); border-radius: 12px; padding: 10px 14px; max-height: 34vh; overflow-y: auto; }
+.share-words div { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; }
+.share-words .sw-foreign { font-weight: 700; }
+.share-words .sw-swedish { color: var(--muted); text-align: right; }
+.share-modal .btn-row { margin-top: 16px; }
+
 /* Bakgrund & läge (bara på startsidan) */
 .bg-picker { background: var(--panel); border-radius: 16px; padding: 14px 18px; margin: 4px 0 16px; box-shadow: 0 5px 16px rgba(0,0,0,.14); text-align: center; }
 .bg-picker-title { font-weight: 800; font-size: 1.1rem; }
@@ -414,7 +426,7 @@ input.wrong { border-color: var(--red) !important; background: var(--red-bg) !im
       <div id="spell-mask" class="spell-mask" aria-hidden="true"></div>
       <div class="spell-input-row">
         <input id="spell-input" type="text" autocomplete="off" placeholder="Stava ordet här...">
-        <button id="spell-check-btn" class="btn">Kolla ✔</button>
+        <button id="spell-show-btn" class="btn">Visa ord</button>
       </div>
       <p id="spell-voice-warn" class="voice-warn hidden"></p>
       <p id="spell-status" class="spell-status hidden"></p>
@@ -426,6 +438,20 @@ input.wrong { border-color: var(--red) !important; background: var(--red-bg) !im
     </div>
     <button class="btn back-btn" id="spell-back">🏠 Tillbaka till menyn</button>
   </section>
+
+  <!-- DELAD LÄXA (import via länk) -->
+  <div id="share-modal-backdrop" class="modal-backdrop hidden">
+    <div class="share-modal">
+      <h3>📬 Delad läxa</h3>
+      <div id="share-modal-name" class="share-modal-name"></div>
+      <div id="share-modal-meta" class="share-modal-meta"></div>
+      <div id="share-modal-words" class="share-words"></div>
+      <div class="btn-row">
+        <button id="share-modal-import" class="btn primary">✅ Importera läxan</button>
+        <button id="share-modal-reject" class="btn">❌ Neka</button>
+      </div>
+    </div>
+  </div>
 
 </div>
 
@@ -731,6 +757,11 @@ function renderHome() {
     openBtn.className = 'btn glossary-open';
     openBtn.textContent = 'Öva! ▶';
     openBtn.onclick = function (e) { e.stopPropagation(); openGlossary(g.id); };
+    var shareBtn = document.createElement('button');
+    shareBtn.className = 'btn glossary-edit';
+    shareBtn.textContent = '🔗 Dela';
+    shareBtn.title = 'Kopiera en delningslänk för läxan';
+    shareBtn.onclick = function (e) { e.stopPropagation(); shareGlossary(g.id); };
     var editBtn = null;
     if (g.archived) {
       editBtn = document.createElement('button');
@@ -760,6 +791,7 @@ function renderHome() {
     delBtn.title = 'Ta bort läxan';
     delBtn.onclick = function (e) { e.stopPropagation(); deleteGlossary(g.id); };
     actions.appendChild(openBtn);
+    actions.appendChild(shareBtn);
     actions.appendChild(editBtn);
     actions.appendChild(archBtn);
     actions.appendChild(delBtn);
@@ -934,6 +966,244 @@ function importGlossaries() {
     fileInput.value = '';
   };
   reader.readAsText(file);
+}
+
+// ---------- Dela läxa (URL) ----------
+// Format: ?d=<base64url>. Byte-strömmen börjar med en marker
+// (1 = deflate-packerad, 0 = opackerad) följt av minimal json:
+// {"v":1,"n":namn,"l":språk,"w":[ordpar] eller [svenska ord]}
+var SHARE_MAX_WORDS = 2000;
+var SHARE_MAX_TEXT = 100;
+
+function hasCompressionApi() {
+  return (typeof CompressionStream !== 'undefined' && typeof DecompressionStream !== 'undefined');
+}
+
+function concatChunks(chunks) {
+  var len = 0;
+  chunks.forEach(function (c) { len += c.length; });
+  var out = new Uint8Array(len);
+  var off = 0;
+  chunks.forEach(function (c) { out.set(c, off); off += c.length; });
+  return out;
+}
+
+// Läser ner en ReadableStream till en Uint8Array
+function readStreamToArray(stream) {
+  var reader = stream.getReader();
+  var chunks = [];
+  return new Promise(function (resolve, reject) {
+    (function read() {
+      reader.read().then(function (r) {
+        if (r.done) { resolve(concatChunks(chunks)); }
+        else { chunks.push(r.value); read(); }
+      }, reject);
+    })();
+  });
+}
+
+// Packar texten (deflate-raw) och lägger på markern; ger opackerad fallback
+// om webbläsaren saknar CompressionStream eller om packningen blir större
+function compressText(text) {
+  var data = new TextEncoder().encode(text);
+  function plain() {
+    var out = new Uint8Array(1 + data.length);
+    out[0] = 0;
+    out.set(data, 1);
+    return out;
+  }
+  if (!hasCompressionApi()) { return Promise.resolve(plain()); }
+  var rs = new ReadableStream({
+    start: function (controller) { controller.enqueue(data); controller.close(); }
+  });
+  return readStreamToArray(rs.pipeThrough(new CompressionStream('deflate-raw'))).then(function (packed) {
+    if (packed.length >= data.length) { return plain(); }
+    var out = new Uint8Array(1 + packed.length);
+    out[0] = 1;
+    out.set(packed, 1);
+    return out;
+  });
+}
+
+// Avkodar byte-strömmen (marker + data) till utf-8-text
+function decompressPayload(bytes) {
+  var marker = bytes[0];
+  var data = bytes.subarray(1);
+  if (marker === 0) { return Promise.resolve(new TextDecoder().decode(data)); }
+  if (!hasCompressionApi()) { return Promise.reject(new Error('webbläsaren saknar unpack')); }
+  var rs = new ReadableStream({
+    start: function (controller) { controller.enqueue(data); controller.close(); }
+  });
+  return readStreamToArray(rs.pipeThrough(new DecompressionStream('deflate-raw'))).then(function (decompressed) {
+    return new TextDecoder().decode(decompressed);
+  });
+}
+
+function b64urlEncode(bytes) {
+  var bin = '';
+  for (var i = 0; i < bytes.length; i += 0x8000) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function b64urlDecode(str) {
+  var b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (b64.length % 4) { b64 += '='; }
+  var bin = atob(b64);
+  var bytes = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) { bytes[i] = bin.charCodeAt(i); }
+  return bytes;
+}
+
+// Minimerad delnings-payload (endast namn, språk och ord)
+function buildSharePayload(g) {
+  var w = [];
+  for (var i = 0; i < g.words.length; i++) {
+    w.push((g.language === 'sv') ? g.words[i].word : [g.words[i].foreign, g.words[i].swedish]);
+  }
+  return { v: 1, n: g.name, l: g.language, w: w };
+}
+
+function shareGlossary(id) {
+  var list = loadGlossaries();
+  var g = null;
+  for (var i = 0; i < list.length; i++) { if (list[i].id === id) { g = list[i]; break; } }
+  if (!g) { alert('Läxan kunde inte hittas.'); return; }
+  logFeature('dela_läxa');
+  compressText(JSON.stringify(buildSharePayload(g))).then(function (bytes) {
+    var url = location.origin + location.pathname + '?d=' + b64urlEncode(bytes);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function () {
+        alert('✅ Delningslänken är kopierad till urklipp!\n\nSkicka den till en kompis – hen får då chansen att importera läxan.');
+      }, function () { promptCopyShareUrl(url); });
+    } else {
+      promptCopyShareUrl(url);
+    }
+  }).catch(function () {
+    alert('Tyvärr – delningslänken kunde inte skapas.');
+  });
+}
+
+function promptCopyShareUrl(url) {
+  prompt('Kopiera delningslänken (markera allt → kopiera):', url);
+}
+
+// ---------- Importera delad läxa (URL) ----------
+var pendingShared = null; // rensad läxa som väntar på bekräftelse
+
+// Validerar url-payloaden – returnerar rensad läxa (i den form
+// sanitizeImportedGlossary förstår) eller null
+function cleanSharedPayload(p) {
+  if (!p || typeof p !== 'object') { return null; }
+  var name = (typeof p.n === 'string') ? p.n.trim() : '';
+  if (!name || name.length > SHARE_MAX_TEXT) { return null; }
+  var language = (p.l === 'en' || p.l === 'de' || p.l === 'sv') ? p.l : null;
+  if (!language) { return null; }
+  if (Object.prototype.toString.call(p.w) !== '[object Array]') { return null; }
+  if (!p.w.length || p.w.length > SHARE_MAX_WORDS) { return null; }
+  var words = [];
+  for (var i = 0; i < p.w.length; i++) {
+    var item = p.w[i];
+    if (language === 'sv') {
+      var wd = (typeof item === 'string') ? item.trim() : '';
+      if (wd && wd.length <= SHARE_MAX_TEXT) { words.push({ word: wd }); }
+    } else {
+      if (!item || Object.prototype.toString.call(item) !== '[object Array]' || item.length !== 2) { return null; }
+      var f = (typeof item[0] === 'string') ? item[0].trim() : '';
+      var s = (typeof item[1] === 'string') ? item[1].trim() : '';
+      if (!f || !s || f.length > SHARE_MAX_TEXT || s.length > SHARE_MAX_TEXT) { return null; }
+      words.push({ foreign: f, swedish: s });
+    }
+  }
+  if (!words.length) { return null; }
+  return { name: name, language: language, words: words };
+}
+
+function showShareModal(g) {
+  pendingShared = g;
+  document.getElementById('share-modal-name').textContent = g.name;
+  document.getElementById('share-modal-meta').textContent =
+    langEmoji(g.language) + ' ' + langLabel(g.language) + ' · 📚 ' + g.words.length + ' ord';
+  var box = document.getElementById('share-modal-words');
+  box.innerHTML = '';
+  g.words.forEach(function (w) {
+    var row = document.createElement('div');
+    if (g.language === 'sv') {
+      row.innerHTML = '<span class="sw-foreign">' + esc(w.word) + '</span>';
+    } else {
+      row.innerHTML = '<span class="sw-foreign">' + esc(w.foreign) + '</span>' +
+        '<span class="sw-swedish">' + esc(w.swedish) + '</span>';
+    }
+    box.appendChild(row);
+  });
+  document.getElementById('share-modal-backdrop').classList.remove('hidden');
+}
+
+function closeShareModal() {
+  document.getElementById('share-modal-backdrop').classList.add('hidden');
+}
+
+function confirmSharedImport() {
+  if (!pendingShared) { return; }
+  var g = pendingShared;
+  pendingShared = null;
+  var list = loadGlossaries();
+  var existingNames = {};
+  list.forEach(function (x) { existingNames[norm(x.name)] = true; });
+  // Namnkrock → " (kopia)"-suffix tills namnet är unikt
+  var name = g.name;
+  var k = 1;
+  while (existingNames[norm(name)]) {
+    k++;
+    name = g.name + (k === 2 ? ' (kopia)' : ' (kopia ' + (k - 1) + ')');
+  }
+  var id = 'g_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
+  list.unshift({ id: id, name: name, language: g.language, words: g.words, createdAt: g.createdAt, archived: false });
+  saveGlossaries(list);
+  logFeature('importera_url');
+  closeShareModal();
+  alert('📥 Läxan "' + name + '" har importerats!');
+  showHome();
+}
+
+function rejectSharedImport() {
+  pendingShared = null;
+  closeShareModal();
+}
+
+// Kollar ?d-parametern när appen startar – visar importmodalen om en giltig
+// delad läxa hittas. Parametern tas bort direkt så uppdatering inte visar
+// modalen igen
+function handleSharedUrl() {
+  var params = new URLSearchParams(location.search);
+  var d = params.get('d');
+  if (!d) { return; }
+  history.replaceState(null, '', location.pathname);
+  function fail() { alert('⚠️ Delningslänken kunde inte läsas.'); }
+  var bytes;
+  try {
+    bytes = b64urlDecode(d);
+  } catch (e) {
+    fail();
+    return;
+  }
+  if (!bytes.length) { fail(); return; }
+  decompressPayload(bytes).then(function (text) {
+    var payload;
+    try {
+      payload = JSON.parse(text);
+    } catch (e) {
+      fail();
+      return;
+    }
+    var g = cleanSharedPayload(payload);
+    if (!g) {
+      alert('⚠️ Länken ser inte ut att vara en delad Glosor-läxa.');
+      return;
+    }
+    showShareModal(sanitizeImportedGlossary(g));
+  }).catch(fail);
 }
 
 // ---------- Skapa ny läxa ----------
@@ -1471,7 +1741,8 @@ function spellExpected() {
 }
 
 // Visa ordet som "___" (mellanslag kvar som mellanslag); rätt stavade bokstäver ersätter "_"
-function renderSpellMask() {
+// full = visa hela ordet (som att det stavats korrekt), t.ex. via "Visa ord"-knappen
+function renderSpellMask(full) {
   var el = document.getElementById('spell-mask');
   if (!el) { return; }
   if (!spell || spell.index >= spell.order.length) { el.innerHTML = ''; return; }
@@ -1481,7 +1752,7 @@ function renderSpellMask() {
   for (var i = 0; i < expected.length; i++) {
     var ch = expected.charAt(i);
     if (ch === ' ') { html += '&nbsp;'; continue; }
-    if (typed.charAt(i) === ch.toLowerCase()) {
+    if (full || typed.charAt(i) === ch.toLowerCase()) {
       html += '<span class="spell-mask-on">' + esc(ch) + '</span>';
     } else {
       html += '_';
@@ -1633,7 +1904,7 @@ function init() {
   document.getElementById('match-back').onclick = showMenu;
   document.getElementById('spell-back').onclick = showMenu;
   document.getElementById('spell-listen').onclick = spellListen;
-  document.getElementById('spell-check-btn').onclick = function () { spellCheck(true); };
+  document.getElementById('spell-show-btn').onclick = function () { renderSpellMask(true); };
   document.getElementById('spell-restart').onclick = startSpell;
   var dirBtns = document.querySelectorAll('.dir-btn');
   dirBtns.forEach(function (b) {
@@ -1642,6 +1913,8 @@ function init() {
   var si = document.getElementById('spell-input');
   si.addEventListener('input', function () { spellCheck(false); renderSpellMask(); });
   si.addEventListener('keydown', function (e) { if (e.key === 'Enter') { spellCheck(true); } });
+  document.getElementById('share-modal-import').onclick = confirmSharedImport;
+  document.getElementById('share-modal-reject').onclick = rejectSharedImport;
   var theme = loadTheme();
   applyTheme(theme);
   var swatches = document.querySelectorAll('.bg-swatch');
@@ -1660,6 +1933,7 @@ function init() {
     applyTheme(theme);
   };
   showHome();
+  handleSharedUrl();
 }
 
 init();
