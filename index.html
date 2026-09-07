@@ -142,6 +142,16 @@ h2 { color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.2); text-align: center; }
 .share-words .sw-swedish { color: var(--muted); text-align: right; }
 .share-modal .btn-row { margin-top: 16px; }
 
+/* Vrid telefonen (bara små stående skärmar) */
+#rotate-overlay { display: none; position: fixed; inset: 0; background: var(--card-bg); z-index: 200; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; }
+#rotate-overlay .rotate-title { margin: 0 0 18px; font-size: 1.8rem; font-weight: 800; line-height: 1.2; }
+#rotate-overlay .rotate-icon { width: 96px; height: 96px; color: var(--primary); animation: rotatePhone 2.8s ease-in-out infinite; }
+#rotate-overlay p { max-width: 22rem; margin: 20px auto 0; font-size: 1.2rem; font-weight: 700; line-height: 1.55; }
+@keyframes rotatePhone { 0%, 18% { transform: rotate(0deg); } 52%, 78% { transform: rotate(90deg); } 100% { transform: rotate(0deg); } }
+@media (orientation: portrait) and (max-width: 640px) {
+  #rotate-overlay { display: flex; }
+}
+
 /* Bakgrund & läge (bara på startsidan) */
 .bg-picker { background: var(--panel); border-radius: 16px; padding: 14px 18px; margin: 4px 0 16px; box-shadow: 0 5px 16px rgba(0,0,0,.14); text-align: center; }
 .bg-picker-title { font-weight: 800; font-size: 1.1rem; }
@@ -451,6 +461,18 @@ input.wrong { border-color: var(--red) !important; background: var(--red-bg) !im
         <button id="share-modal-reject" class="btn">❌ Neka</button>
       </div>
     </div>
+  </div>
+
+  <!-- Vrid telefonen (bara små stående skärmar) -->
+  <div id="rotate-overlay" role="alert">
+    <div class="rotate-title">Glosor<br>av Zilux IT AB</div>
+    <svg class="rotate-icon" viewBox="0 0 96 96" fill="none" aria-hidden="true">
+      <rect x="36" y="22" width="24" height="48" rx="5" stroke="currentColor" stroke-width="5"/>
+      <path d="M44 63h8" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+      <path d="M72 28a24 24 0 0 1 0 40" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+      <polygon points="72,68 76.5,60 81,67" fill="currentColor"/>
+    </svg>
+    <p>Hemsidan är inte anpassad för små stående skärmar. Vrid på mobilen till liggande läge för att fortsätta.</p>
   </div>
 
 </div>
