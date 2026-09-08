@@ -142,6 +142,13 @@ h2 { color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.2); text-align: center; }
 .share-words .sw-swedish { color: var(--muted); text-align: right; }
 .share-modal .btn-row { margin-top: 16px; }
 
+/* QR-kod (delning) */
+.qr-modal { background: var(--card-bg); border-radius: 20px; padding: 22px; width: min(400px, 100%); box-shadow: 0 12px 32px rgba(0,0,0,.3); text-align: center; }
+.qr-modal h3 { margin: 0 0 6px; font-size: 1.4rem; }
+.qr-hint { color: var(--muted); margin: 0 0 14px; font-size: .95rem; }
+#qr-canvas { width: 100%; max-width: 320px; image-rendering: pixelated; border-radius: 8px; }
+.qr-modal .btn-row { margin-top: 16px; }
+
 /* Vrid telefonen (bara små stående skärmar) */
 #rotate-overlay { display: none; position: fixed; inset: 0; background: var(--card-bg); z-index: 200; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; }
 #rotate-overlay .rotate-title { margin: 0 0 18px; font-size: 1.8rem; font-weight: 800; line-height: 1.2; }
@@ -457,6 +464,19 @@ input.wrong { border-color: var(--red) !important; background: var(--red-bg) !im
       <div class="btn-row">
         <button id="share-modal-import" class="btn primary">✅ Importera läxan</button>
         <button id="share-modal-reject" class="btn">❌ Neka</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR-KOD (delning) -->
+  <div id="qr-modal-backdrop" class="modal-backdrop hidden">
+    <div class="qr-modal">
+      <h3>📱 Scanna med mobilen</h3>
+      <p class="qr-hint">Rikta in kameran på koden – så kan din kompis importera läxan direkt.</p>
+      <canvas id="qr-canvas"></canvas>
+      <div class="btn-row">
+        <button id="qr-copy-link" class="btn primary">🔗 Kopiera länk</button>
+        <button id="qr-close" class="btn">Avbryt</button>
       </div>
     </div>
   </div>
@@ -1085,6 +1105,399 @@ function buildSharePayload(g) {
   return { v: 1, n: g.name, l: g.language, w: w };
 }
 
+// ---------- QR-koda (egen encoder, 1:1-port av verifierad referens) ----------
+// Byte-mode, felkorrigeringsnivå L, versioner 1-40. qrEncode(text)
+// returnerar matrisen (True = mörk modul) eller null om för långt.
+
+var QR_ECC_L = [
+  [7, [[19, 1]]],
+  [10, [[34, 1]]],
+  [15, [[55, 1]]],
+  [20, [[80, 1]]],
+  [26, [[108, 1]]],
+  [18, [[68, 2]]],
+  [20, [[78, 2]]],
+  [24, [[97, 2]]],
+  [30, [[116, 2]]],
+  [18, [[68, 2], [69, 2]]],
+  [20, [[81, 4]]],
+  [24, [[92, 2], [93, 2]]],
+  [26, [[107, 4]]],
+  [30, [[115, 3], [116, 1]]],
+  [22, [[87, 5], [88, 1]]],
+  [24, [[98, 5], [99, 1]]],
+  [28, [[107, 1], [108, 5]]],
+  [30, [[120, 5], [121, 1]]],
+  [28, [[113, 3], [114, 4]]],
+  [28, [[107, 3], [108, 5]]],
+  [28, [[116, 4], [117, 4]]],
+  [28, [[111, 2], [112, 7]]],
+  [30, [[121, 4], [122, 5]]],
+  [30, [[117, 6], [118, 4]]],
+  [26, [[106, 8], [107, 4]]],
+  [28, [[114, 10], [115, 2]]],
+  [30, [[122, 8], [123, 4]]],
+  [30, [[117, 3], [118, 10]]],
+  [30, [[116, 7], [117, 7]]],
+  [30, [[115, 5], [116, 10]]],
+  [30, [[115, 13], [116, 3]]],
+  [30, [[115, 17]]],
+  [30, [[115, 17], [116, 1]]],
+  [30, [[115, 13], [116, 6]]],
+  [30, [[121, 12], [122, 7]]],
+  [30, [[121, 6], [122, 14]]],
+  [30, [[122, 17], [123, 4]]],
+  [30, [[122, 4], [123, 18]]],
+  [30, [[117, 20], [118, 4]]],
+  [30, [[118, 19], [119, 6]]],
+];
+var QR_ALIGN = [
+  [], [6, 18], [6, 22], [6, 26], [6, 30], [6, 34], [6, 22, 38], [6, 24, 42],
+  [6, 26, 46], [6, 28, 50], [6, 30, 54], [6, 32, 58], [6, 34, 62],
+  [6, 26, 46, 66], [6, 26, 48, 70], [6, 26, 50, 74], [6, 30, 54, 78],
+  [6, 30, 56, 82], [6, 30, 58, 86], [6, 34, 62, 90], [6, 28, 50, 72, 94],
+  [6, 26, 50, 74, 98], [6, 30, 54, 78, 102], [6, 28, 54, 80, 106],
+  [6, 32, 58, 84, 110], [6, 30, 58, 86, 114], [6, 34, 62, 90, 118],
+  [6, 26, 50, 74, 98, 122], [6, 30, 54, 78, 102, 126],
+  [6, 26, 52, 78, 104, 130], [6, 30, 56, 82, 108, 134],
+  [6, 34, 60, 86, 112, 138], [6, 30, 58, 86, 114, 142],
+  [6, 34, 62, 90, 118, 146], [6, 30, 54, 78, 102, 126, 150],
+  [6, 24, 50, 76, 102, 128, 154], [6, 28, 54, 80, 106, 132, 158],
+  [6, 32, 58, 84, 110, 136, 162], [6, 26, 54, 82, 110, 138, 166],
+  [6, 30, 58, 86, 114, 142, 170],
+];
+// Galoiskroppen GF(256) – exp/log-tabeller
+var QR_EXP = new Array(512);
+var QR_LOG = new Array(256);
+(function () {
+  var x = 1;
+  for (var i = 0; i < 255; i++) {
+    QR_EXP[i] = x;
+    QR_LOG[x] = i;
+    x <<= 1;
+    if (x & 0x100) { x ^= 0x11D; }
+  }
+  for (var j = 255; j < 512; j++) { QR_EXP[j] = QR_EXP[j - 255]; }
+})();
+
+function gfMul(a, b) {
+  if (a === 0 || b === 0) { return 0; }
+  return QR_EXP[QR_LOG[a] + QR_LOG[b]];
+}
+
+function rsDivisor(degree) {
+  var result = new Array(degree);
+  for (var i = 0; i < degree; i++) { result[i] = 0; }
+  result[degree - 1] = 1;
+  var root = 1;
+  for (var r = 0; r < degree; r++) {
+    for (var j = 0; j < degree; j++) {
+      result[j] = gfMul(result[j], root);
+      if (j + 1 < degree) { result[j] ^= result[j + 1]; }
+    }
+    root = gfMul(root, 2);
+  }
+  return result;
+}
+
+function rsEcc(data, divisor) {
+  var result = new Array(divisor.length);
+  for (var i = 0; i < result.length; i++) { result[i] = 0; }
+  for (var k = 0; k < data.length; k++) {
+    var factor = data[k] ^ result.shift();
+    result.push(0);
+    for (var j = 0; j < divisor.length; j++) {
+      result[j] ^= gfMul(divisor[j], factor);
+    }
+  }
+  return result;
+}
+
+function qrEncode(text) {
+  var data = new TextEncoder().encode(text);
+
+  // 1. Minsta version som ryms (mode 4 bitar + count + data + 4 terminator)
+  var version = 0;
+  for (var v = 1; v <= 40; v++) {
+    var vBlocks = QR_ECC_L[v - 1][1];
+    var cap = 0;
+    for (var vb = 0; vb < vBlocks.length; vb++) { cap += vBlocks[vb][0] * vBlocks[vb][1]; }
+    cap *= 8;
+    var countBits = (v <= 9) ? 8 : 16;
+    if (4 + countBits + 8 * data.length + 4 <= cap) { version = v; break; }
+  }
+  if (version === 0) { return null; }
+
+  var ecc = QR_ECC_L[version - 1][0];
+  var blocks = QR_ECC_L[version - 1][1];
+  var totalDataCw = 0;
+  for (var tb = 0; tb < blocks.length; tb++) { totalDataCw += blocks[tb][0] * blocks[tb][1]; }
+
+  // 2. Bitbuffer
+  var bits = [];
+  function append(val, n) {
+    for (var i = n - 1; i >= 0; i--) { bits.push((val >> i) & 1); }
+  }
+  append(4, 4); // byte-mode
+  append(data.length, (version <= 9) ? 8 : 16);
+  for (var b = 0; b < data.length; b++) { append(data[b], 8); }
+  var capBits = totalDataCw * 8;
+  if (bits.length + 4 <= capBits) { append(0, 4); } // terminator
+  while (bits.length % 8 !== 0) { append(0, 1); }
+  while (bits.length < capBits) {
+    append(0xEC, 8);
+    if (bits.length >= capBits) { break; }
+    append(0x11, 8);
+  }
+  var dataCw = [];
+  for (var i = 0; i < bits.length / 8; i++) {
+    var val = 0;
+    for (var j = 0; j < 8; j++) { val = (val << 1) | bits[i * 8 + j]; }
+    dataCw.push(val);
+  }
+
+  // 3. Reed-Solomon-blockar
+  var divisor = rsDivisor(ecc);
+  var bl = [];
+  var pos = 0;
+  for (var g = 0; g < blocks.length; g++) {
+    for (var c = 0; c < blocks[g][1]; c++) {
+      var dat = dataCw.slice(pos, pos + blocks[g][0]);
+      pos += blocks[g][0];
+      bl.push(dat.concat(rsEcc(dat, divisor)));
+    }
+  }
+
+  // 4. Interleave (data del, sedan ecc del)
+  var interleaved = [];
+  var maxData = 0;
+  for (var md = 0; md < blocks.length; md++) {
+    if (blocks[md][0] > maxData) { maxData = blocks[md][0]; }
+  }
+  for (var i2 = 0; i2 < maxData; i2++) {
+    for (var b2 = 0; b2 < bl.length; b2++) {
+      if (i2 < bl[b2].length - ecc) { interleaved.push(bl[b2][i2]); }
+    }
+  }
+  for (var i3 = 0; i3 < ecc; i3++) {
+    for (var b3 = 0; b3 < bl.length; b3++) {
+      interleaved.push(bl[b3][bl[b3].length - ecc + i3]);
+    }
+  }
+
+  // 5. Matris
+  var size = 17 + 4 * version;
+  var modules = [];
+  var isfunc = [];
+  for (var y = 0; y < size; y++) {
+    var mrow = new Array(size);
+    var frow = new Array(size);
+    for (var x = 0; x < size; x++) { mrow[x] = false; frow[x] = false; }
+    modules.push(mrow);
+    isfunc.push(frow);
+  }
+
+  function setFunc(x, y, dark) { // x = kolumn, y = rad
+    modules[y][x] = dark;
+    isfunc[y][x] = true;
+  }
+
+  function setupFinder(x, y) {
+    for (var dx = -4; dx <= 7; dx++) {
+      for (var dy = -4; dy <= 7; dy++) {
+        var dist = Math.max(Math.abs(dx), Math.abs(dy));
+        var xx = x + dx, yy = y + dy;
+        if (xx >= 0 && xx < size && yy >= 0 && yy < size && dist <= 4) {
+          setFunc(xx, yy, dist !== 2 && dist !== 4);
+        }
+      }
+    }
+  }
+
+  setupFinder(3, 3);
+  setupFinder(size - 4, 3);
+  setupFinder(3, size - 4);
+
+  var align = QR_ALIGN[version - 1];
+  var na = align.length;
+  for (var ai = 0; ai < na; ai++) {
+    for (var aj = 0; aj < na; aj++) {
+      if ((ai === 0 && aj === 0) || (ai === 0 && aj === na - 1) || (ai === na - 1 && aj === 0)) { continue; }
+      for (var adx = -2; adx <= 2; adx++) {
+        for (var ady = -2; ady <= 2; ady++) {
+          setFunc(align[ai] + adx, align[aj] + ady,
+            Math.max(Math.abs(adx), Math.abs(ady)) !== 1);
+        }
+      }
+    }
+  }
+
+  for (var t = 8; t < size - 8; t++) {
+    setFunc(6, t, t % 2 === 0);
+    setFunc(t, 6, t % 2 === 0);
+  }
+
+  if (version >= 7) {
+    var rem = version;
+    for (var r = 0; r < 12; r++) {
+      rem = (rem << 1) ^ ((rem >> 11) * 0x1F25);
+    }
+    var vbits = (version << 12) | rem;
+    for (var vi = 0; vi < 18; vi++) {
+      var color = (vbits >> vi) & 1;
+      var a = size - 11 + vi % 3;
+      var bq = Math.floor(vi / 3);
+      setFunc(a, bq, color === 1);
+      setFunc(bq, a, color === 1);
+    }
+  }
+
+  function drawFormat(mask) {
+    var data5 = 8 | mask; // nivå L = 01b
+    var rem = data5;
+    for (var r = 0; r < 10; r++) {
+      rem = (rem << 1) ^ ((rem >> 9) * 0x537);
+    }
+    var fbits = ((data5 << 10) | rem) ^ 0x5412;
+    function bit(i) { return (fbits >> i) & 1; }
+    for (var i = 0; i < 6; i++) { setFunc(8, i, bit(i) === 1); }
+    setFunc(8, 7, bit(6) === 1);
+    setFunc(8, 8, bit(7) === 1);
+    setFunc(7, 8, bit(8) === 1);
+    for (var i2 = 9; i2 < 15; i2++) { setFunc(14 - i2, 8, bit(i2) === 1); }
+    for (var i3 = 0; i3 < 8; i3++) { setFunc(size - 1 - i3, 8, bit(i3) === 1); }
+    for (var i4 = 8; i4 < 15; i4++) { setFunc(8, size - 15 + i4, bit(i4) === 1); }
+    setFunc(8, size - 8, true); // mörk modul (rad size-8, kol 8)
+  }
+
+  drawFormat(0); // reservera format-platser
+
+  // 6. Data i zigzag
+  var bi = 0;
+  var bitlen = interleaved.length * 8;
+  var right = size - 1;
+  while (right >= 1) {
+    if (right === 6) { right = 5; }
+    var upward = ((right + 1) & 2) === 0;
+    var vert = 0;
+    while (vert < size) {
+      for (var j = 0; j < 2; j++) {
+        var x = right - j;
+        var yy = upward ? (size - 1 - vert) : vert;
+        if (!isfunc[yy][x] && bi < bitlen) {
+          modules[yy][x] = ((interleaved[bi >> 3] >> (7 - (bi & 7))) & 1) === 1;
+          bi++;
+        }
+      }
+      vert++;
+    }
+    right -= 2;
+  }
+
+  function maskBit(m, y, x) {
+    if (m === 0) { return (y + x) % 2 === 0; }
+    if (m === 1) { return y % 2 === 0; }
+    if (m === 2) { return x % 3 === 0; }
+    if (m === 3) { return (y + x) % 3 === 0; }
+    if (m === 4) { return (Math.floor(y / 2) + Math.floor(x / 3)) % 2 === 0; }
+    if (m === 5) { return (y * x) % 2 + (y * x) % 3 === 0; }
+    if (m === 6) { return ((y * x) % 2 + (y * x) % 3) % 2 === 0; }
+    return ((y + x) % 2 + (y * x) % 3) % 2 === 0;
+  }
+
+  function applyMask(m) {
+    for (var y = 0; y < size; y++) {
+      for (var x = 0; x < size; x++) {
+        if (!isfunc[y][x] && maskBit(m, y, x)) {
+          modules[y][x] = !modules[y][x];
+        }
+      }
+    }
+  }
+
+  function lostPoints() {
+    var result = 0;
+    // N1: likafärgade strängar >= 5
+    var y, x, run;
+    for (y = 0; y < size; y++) {
+      run = 1;
+      for (x = 1; x < size; x++) {
+        if (modules[y][x] === modules[y][x - 1]) { run++; }
+        else {
+          if (run >= 5) { result += 3 + (run - 5); }
+          run = 1;
+        }
+      }
+      if (run >= 5) { result += 3 + (run - 5); }
+    }
+    for (x = 0; x < size; x++) {
+      run = 1;
+      for (y = 1; y < size; y++) {
+        if (modules[y][x] === modules[y - 1][x]) { run++; }
+        else {
+          if (run >= 5) { result += 3 + (run - 5); }
+          run = 1;
+        }
+      }
+      if (run >= 5) { result += 3 + (run - 5); }
+    }
+    // N2: 2x2-block av samma färg
+    for (y = 0; y < size - 1; y++) {
+      for (x = 0; x < size - 1; x++) {
+        var v2 = modules[y][x];
+        if (v2 === modules[y][x + 1] && v2 === modules[y + 1][x] && v2 === modules[y + 1][x + 1]) {
+          result += 3;
+        }
+      }
+    }
+    // N3: finder-mönster 1011101 med 4 ljusa på ena sidan
+    var pA = [1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0];
+    var pB = [0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1];
+    function segEquals(seg, p) {
+      for (var i = 0; i < 11; i++) { if (seg[i] !== p[i]) { return false; } }
+      return true;
+    }
+    for (y = 0; y < size; y++) {
+      for (x = 0; x < size; x++) {
+        if (x + 11 < size) {
+          var seg = [];
+          for (var i = 0; i < 11; i++) { seg.push(modules[y][x + i]); }
+          if (segEquals(seg, pA) || segEquals(seg, pB)) { result += 40; }
+        }
+        if (y + 11 < size) {
+          var seg2 = [];
+          for (var i2 = 0; i2 < 11; i2++) { seg2.push(modules[y + i2][x]); }
+          if (segEquals(seg2, pA) || segEquals(seg2, pB)) { result += 40; }
+        }
+      }
+    }
+    // N4: balans mellan mörka och ljusa
+    var dark = 0;
+    for (y = 0; y < size; y++) {
+      for (x = 0; x < size; x++) { if (modules[y][x]) { dark++; } }
+    }
+    var total = size * size;
+    result += Math.floor(Math.abs(dark * 20 - total * 10) / total) * 10;
+    return result;
+  }
+
+  // 7. Bästa mask
+  var bestMask = 0;
+  var bestPen = -1;
+  for (var m = 0; m < 8; m++) {
+    applyMask(m);
+    drawFormat(m);
+    var pen = lostPoints();
+    if (bestPen === -1 || pen < bestPen) { bestMask = m; bestPen = pen; }
+    applyMask(m); // rulla tillbaka
+  }
+  applyMask(bestMask);
+  drawFormat(bestMask);
+  return modules;
+}
+
+var pendingShareUrl = null; // länk som visas i QR-modalen
+
 function shareGlossary(id) {
   var list = loadGlossaries();
   var g = null;
@@ -1093,20 +1506,63 @@ function shareGlossary(id) {
   logFeature('dela_läxa');
   compressText(JSON.stringify(buildSharePayload(g))).then(function (bytes) {
     var url = location.origin + location.pathname + '?d=' + b64urlEncode(bytes);
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).then(function () {
-        alert('✅ Delningslänken är kopierad till urklipp!\n\nSkicka den till en kompis – hen får då chansen att importera läxan.');
-      }, function () { promptCopyShareUrl(url); });
-    } else {
-      promptCopyShareUrl(url);
+    var matrix = qrEncode(url);
+    if (!matrix) {
+      copyShareUrl(url); // för långt för QR-kod – fall tillbaka på urklipp
+      return;
     }
+    pendingShareUrl = url;
+    drawQrCanvas(matrix);
+    document.getElementById('qr-modal-backdrop').classList.remove('hidden');
   }).catch(function () {
     alert('Tyvärr – delningslänken kunde inte skapas.');
   });
 }
 
+// Ritar QR-matrisen på canvasen (vit bakgrund, mörka moduler, lugn zon)
+function drawQrCanvas(matrix) {
+  var n = matrix.length;
+  var quiet = 4;
+  var cells = n + quiet * 2;
+  var canvas = document.getElementById('qr-canvas');
+  var dpr = window.devicePixelRatio || 1;
+  var scale = Math.max(2, Math.round(340 * dpr / cells));
+  canvas.width = cells * scale;
+  canvas.height = cells * scale;
+  var ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#000000';
+  for (var y = 0; y < n; y++) {
+    for (var x = 0; x < n; x++) {
+      if (matrix[y][x]) {
+        ctx.fillRect((x + quiet) * scale, (y + quiet) * scale, scale, scale);
+      }
+    }
+  }
+}
+
+function copyShareUrl(url) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(function () {
+      alert('✅ Delningslänken är kopierad till urklipp!\n\nSkicka den till en kompis – hen får då chansen att importera läxan.');
+    }, function () { promptCopyShareUrl(url); });
+  } else {
+    promptCopyShareUrl(url);
+  }
+}
+
 function promptCopyShareUrl(url) {
   prompt('Kopiera delningslänken (markera allt → kopiera):', url);
+}
+
+function qrCopyLink() {
+  if (!pendingShareUrl) { return; }
+  copyShareUrl(pendingShareUrl);
+}
+
+function closeQrModal() {
+  document.getElementById('qr-modal-backdrop').classList.add('hidden');
 }
 
 // ---------- Importera delad läxa (URL) ----------
@@ -1927,6 +2383,8 @@ function init() {
   si.addEventListener('keydown', function (e) { if (e.key === 'Enter') { spellCheck(true); } });
   document.getElementById('share-modal-import').onclick = confirmSharedImport;
   document.getElementById('share-modal-reject').onclick = rejectSharedImport;
+  document.getElementById('qr-copy-link').onclick = qrCopyLink;
+  document.getElementById('qr-close').onclick = closeQrModal;
   var theme = loadTheme();
   applyTheme(theme);
   var swatches = document.querySelectorAll('.bg-swatch');
