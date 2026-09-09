@@ -210,6 +210,7 @@ h2 { color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.2); text-align: center; }
 .game-btn:nth-child(2) { background: #93c5fd; }
 .game-btn:nth-child(3) { background: #86efac; }
 .game-btn:nth-child(4) { background: #fcd34d; }
+.game-btn:nth-child(5) { background: #f9a8d4; grid-column: 1 / -1; }
 .game-btn-tip { display: block; font-size: .85rem; font-weight: 500; margin-top: 4px; opacity: .8; }
 
 /* Klassiskt förhör */
@@ -227,7 +228,7 @@ input.revealed { background: var(--amber-soft) !important; border-color: var(--a
 .done-msg.retry { color: var(--amber-ink); background: var(--amber-soft); }
 
 /* Quiz */
-#quiz-area { background: var(--card-bg); border-radius: 20px; padding: 24px; box-shadow: 0 8px 24px rgba(0,0,0,.15); text-align: center; min-height: 260px; margin-bottom: 6px; }
+.quiz-area { background: var(--card-bg); border-radius: 20px; padding: 24px; box-shadow: 0 8px 24px rgba(0,0,0,.15); text-align: center; min-height: 260px; margin-bottom: 6px; }
 .quiz-prompt-label { color: var(--muted); font-weight: 700; }
 .quiz-prompt { font-size: 2.4rem; font-weight: 900; margin: 10px 0 22px; color: var(--primary); }
 :root[data-mode="dark"] .quiz-prompt { color: #fff; }
@@ -235,6 +236,10 @@ input.revealed { background: var(--amber-soft) !important; border-color: var(--a
 .quiz-answer { font-size: 1.3rem; font-weight: 700; padding: 16px; border-radius: 16px; background: var(--input-bg); border: 3px solid transparent; cursor: pointer; }
 .quiz-answer.correct { background: var(--green-bg); border-color: var(--green); color: var(--green-ink); }
 .quiz-answer.wrong { background: var(--red-bg); border-color: var(--red); color: var(--red-ink); animation: shake .4s; }
+.tf-choices { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 22px; }
+.tf-answer { font-size: 1.3rem; font-weight: 700; padding: 16px 26px; border-radius: 16px; background: var(--input-bg); border: 3px solid transparent; cursor: pointer; }
+.tf-answer.correct { background: var(--green-bg); border-color: var(--green); color: var(--green-ink); }
+.tf-answer.wrong { background: var(--red-bg); border-color: var(--red); color: var(--red-ink); animation: shake .4s; }
 @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
 .quiz-end-emoji { font-size: 3.5rem; }
 .quiz-end-score { font-size: 1.3rem; }
@@ -391,6 +396,7 @@ input.wrong { border-color: var(--red) !important; background: var(--red-bg) !im
       <button id="btn-game-quiz" class="btn game-btn">❓ Flervalsquiz<span class="game-btn-tip">När orden börjar sätta sig, men du är osäker.</span></button>
       <button id="btn-game-match" class="btn game-btn">🧩 Matcha Orden<span class="game-btn-tip">För helt nya ord – lära dig känna igen dem.</span></button>
       <button id="btn-game-spell" class="btn game-btn">🎧 Lyssna &amp; Stava<span class="game-btn-tip">Få orden upplästa och öva på stavningen.</span></button>
+      <button id="btn-game-truefalse" class="btn game-btn">🤔 Sant eller Falskt<span class="game-btn-tip">Svenskt + utländskt ord: Sant om de är rätt par, annars Falskt.</span></button>
     </div>
     <button id="menu-to-home" class="btn home-link">🏠 Till startsidan</button>
   </section>
@@ -414,7 +420,7 @@ input.wrong { border-color: var(--red) !important; background: var(--red-bg) !im
   <section id="screen-quiz" class="screen">
     <h1>❓ Flervalsquiz</h1>
     <p id="quiz-progress" class="subtitle"></p>
-    <div id="quiz-area"></div>
+    <div id="quiz-area" class="quiz-area"></div>
     <button class="btn back-btn" id="quiz-back">🏠 Tillbaka till menyn</button>
   </section>
 
@@ -457,6 +463,14 @@ input.wrong { border-color: var(--red) !important; background: var(--red-bg) !im
       <button id="spell-restart" class="btn primary">Spela igen 🔄</button>
     </div>
     <button class="btn back-btn" id="spell-back">🏠 Tillbaka till menyn</button>
+  </section>
+
+  <!-- SANT ELLER FALSKT -->
+  <section id="screen-truefalse" class="screen">
+    <h1>🤔 Sant eller Falskt</h1>
+    <p id="tf-progress" class="subtitle"></p>
+    <div id="tf-area" class="quiz-area"></div>
+    <button class="btn back-btn" id="tf-back">🏠 Tillbaka till menyn</button>
   </section>
 
   <!-- DELAD LÄXA (import via länk) -->
@@ -1924,6 +1938,7 @@ function showMenu() {
   document.getElementById('btn-game-quiz').style.display = sv ? 'none' : '';
   document.getElementById('btn-game-match').style.display = sv ? 'none' : '';
   document.getElementById('btn-game-spell').style.display = '';
+  document.getElementById('btn-game-truefalse').style.display = sv ? 'none' : '';
   document.getElementById('game-grid').style.gridTemplateColumns = sv ? '1fr' : '';
   if (sv) { state.direction = 'sv2foreign'; }
   renderDirToggle();
@@ -2360,6 +2375,95 @@ function spellCheck(withFeedback) {
   }, 1600);
 }
 
+// ---------- Spelmöd 5: Sant eller Falskt ----------
+var tf = null;
+
+function startTrueFalse() {
+  logFeature('sant_eller_falskt');
+  var g = state.current;
+  var n = g.words.length;
+  // Var 2:a till var 3:e kombination ska vara korrekt (Sant)
+  var minSant = Math.ceil(n / 3);
+  var maxSant = Math.floor(n / 2);
+  if (maxSant < minSant) { minSant = 1; maxSant = 1; } // enstaka ord
+  var santCount = minSant + Math.floor(Math.random() * (maxSant - minSant + 1));
+  var santSet = {};
+  shuffle(g.words.map(function (w, i) { return i; })).slice(0, santCount).forEach(function (i) { santSet[i] = true; });
+  var pairs = [];
+  shuffle(g.words.map(function (w, i) { return i; })).forEach(function (i) {
+    var w = g.words[i];
+    var sant = !!santSet[i];
+    var foreign = w.foreign;
+    if (!sant) {
+      // Slumpa ett utländskt ord ur listan som inte är det egna (annars dubbelt rätt svar)
+      var cands = [];
+      g.words.forEach(function (o, j) {
+        if (j !== i && norm(o.foreign) !== norm(w.foreign)) { cands.push(o.foreign); }
+      });
+      if (cands.length === 0) {
+        sant = true; // inget annat utländskt ord att välja – paret blir Sant
+      } else {
+        foreign = cands[Math.floor(Math.random() * cands.length)];
+      }
+    }
+    pairs.push({ swedish: w.swedish, foreign: foreign, sant: sant });
+  });
+  tf = { pairs: pairs, index: 0, score: 0, firstTry: true, locked: false };
+  renderTrueFalse();
+  showScreen('screen-truefalse');
+}
+
+function renderTrueFalse() {
+  var box = document.getElementById('tf-area');
+  box.innerHTML = '';
+  if (tf.index >= tf.pairs.length) {
+    document.getElementById('tf-progress').textContent = '';
+    box.innerHTML = '<div class="quiz-end-emoji">🏆</div>' +
+      '<h2>Klart!</h2>' +
+      '<p class="quiz-end-score">Du fick <b>' + tf.score + ' av ' + tf.pairs.length + '</b> rätt.</p>' +
+      '<div class="btn-row"><button id="tf-restart" class="btn primary huge">Spela igen 🔄</button></div>';
+    document.getElementById('tf-restart').onclick = startTrueFalse;
+    return;
+  }
+  var p = tf.pairs[tf.index];
+  document.getElementById('tf-progress').textContent = 'Fråga ' + (tf.index + 1) + ' av ' + tf.pairs.length + ' · Rätt: ' + tf.score;
+  box.innerHTML = '<div class="quiz-prompt-label">Är det utländska ordet rätt översättning av det svenska?</div>' +
+    '<div class="quiz-prompt">' + esc(p.swedish) + ' – ' + esc(p.foreign) + '</div>';
+  var cbox = document.createElement('div');
+  cbox.className = 'tf-choices';
+  var yes = document.createElement('button');
+  yes.className = 'tf-answer';
+  yes.textContent = '✅ Sant';
+  yes.onclick = function () { tfAnswer(yes, p.sant === true); };
+  var no = document.createElement('button');
+  no.className = 'tf-answer';
+  no.textContent = '❌ Falskt';
+  no.onclick = function () { tfAnswer(no, p.sant === false); };
+  cbox.appendChild(yes);
+  cbox.appendChild(no);
+  box.appendChild(cbox);
+}
+
+function tfAnswer(btn, ok) {
+  if (!tf || tf.locked) { return; }
+  if (ok) {
+    tf.locked = true;
+    btn.classList.add('correct');
+    if (tf.firstTry) { tf.score++; }
+    tf.firstTry = false;
+    setTimeout(function () {
+      tf.index++;
+      tf.firstTry = true;
+      tf.locked = false;
+      renderTrueFalse();
+    }, 1400);
+  } else {
+    btn.classList.add('wrong');
+    tf.firstTry = false;
+    setTimeout(function () { btn.classList.remove('wrong'); }, 650);
+  }
+}
+
 // ---------- Starta appen ----------
 function init() {
   document.getElementById('btn-create-new').onclick = showCreate;
@@ -2384,12 +2488,14 @@ function init() {
   document.getElementById('btn-game-quiz').onclick = startQuiz;
   document.getElementById('btn-game-match').onclick = startMatch;
   document.getElementById('btn-game-spell').onclick = startSpell;
+  document.getElementById('btn-game-truefalse').onclick = startTrueFalse;
   document.getElementById('classic-show-all').onclick = classicShowAll;
   document.getElementById('classic-retry').onclick = startClassic;
   document.getElementById('classic-back').onclick = showMenu;
   document.getElementById('quiz-back').onclick = showMenu;
   document.getElementById('match-back').onclick = showMenu;
   document.getElementById('spell-back').onclick = showMenu;
+  document.getElementById('tf-back').onclick = showMenu;
   document.getElementById('spell-listen').onclick = spellListen;
   document.getElementById('spell-show-btn').onclick = function () { renderSpellMask(true); };
   document.getElementById('spell-restart').onclick = startSpell;
