@@ -221,8 +221,10 @@ h2 { color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.2); text-align: center; }
 .classic-answer input { flex: 1; min-width: 0; font-size: 1.1rem; font-family: inherit; padding: 10px; border: 2px solid var(--border); border-radius: 12px; }
 .classic-show { font-size: .9rem; padding: 8px 12px; background: var(--blue-soft); color: var(--blue-ink); flex: 0 0 auto; }
 input.correct { background: var(--green-bg) !important; border-color: var(--green) !important; color: var(--green-ink); font-weight: 700; }
+input.revealed { background: var(--amber-soft) !important; border-color: var(--accent) !important; color: var(--amber-ink); font-weight: 700; }
 .speaker { border: none; background: var(--blue-soft); border-radius: 50%; width: 44px; height: 44px; padding: 0; cursor: pointer; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; color: var(--blue-ink); }
 .done-msg { text-align: center; font-size: 1.4rem; font-weight: 800; color: var(--green-ink); background: var(--green-bg); border-radius: 16px; padding: 14px; margin-top: 16px; }
+.done-msg.retry { color: var(--amber-ink); background: var(--amber-soft); }
 
 /* Quiz */
 #quiz-area { background: var(--card-bg); border-radius: 20px; padding: 24px; box-shadow: 0 8px 24px rgba(0,0,0,.15); text-align: center; min-height: 260px; margin-bottom: 6px; }
@@ -403,6 +405,9 @@ input.wrong { border-color: var(--red) !important; background: var(--red-bg) !im
     </div>
     <div id="classic-rows" class="classic-rows"></div>
     <p id="classic-done" class="done-msg hidden"></p>
+    <div id="classic-retry-row" class="btn-row hidden">
+      <button id="classic-retry" class="btn primary huge">Försök igen 🔄</button>
+    </div>
   </section>
 
   <!-- FLERTVALSQUIZ -->
@@ -1969,7 +1974,7 @@ function startClassic() {
         inp.readOnly = true;
         spk.classList.remove('hidden');
         showBtn.classList.add('hidden');
-        classicCheckDone();
+        classicCheckSettled();
       }
     });
     spk.addEventListener('click', function () { speak(w.foreign, g.language); });
@@ -1977,22 +1982,32 @@ function startClassic() {
   });
   var done = document.getElementById('classic-done');
   done.classList.add('hidden');
+  done.classList.remove('retry');
   done.textContent = '';
+  document.getElementById('classic-retry-row').classList.add('hidden');
   showScreen('screen-classic');
 }
 
-function showClassicDone() {
-  var d = document.getElementById('classic-done');
-  d.classList.remove('hidden');
-  d.textContent = '🎉 Klart! Du löste alla ord!';
-}
-
-function classicCheckDone() {
+// Terminalt läge: alla fält är ifyllda (rättstavade och/eller visade)
+function classicCheckSettled() {
   var all = document.querySelectorAll('#classic-rows input[data-i]');
+  var revealed = 0;
   for (var k = 0; k < all.length; k++) {
-    if (!all[k].classList.contains('correct')) { return; }
+    if (all[k].classList.contains('revealed')) { revealed++; }
+    if (all[k].value.trim() === '') { return; }
   }
-  showClassicDone();
+  var done = document.getElementById('classic-done');
+  var retryRow = document.getElementById('classic-retry-row');
+  if (revealed === 0) {
+    done.classList.remove('retry');
+    retryRow.classList.add('hidden');
+    done.textContent = '🎉 Klart! Du löste alla ord!';
+  } else {
+    done.classList.add('retry');
+    retryRow.classList.remove('hidden');
+    done.textContent = '👀 Du fick se ' + revealed + ' av ' + all.length + ' ord.';
+  }
+  done.classList.remove('hidden');
 }
 
 function classicReveal(i) {
@@ -2003,13 +2018,13 @@ function classicReveal(i) {
   var inp = document.querySelector('#classic-rows input[data-i="' + i + '"]');
   var spk = document.querySelector('#classic-rows .speaker[data-i="' + i + '"]');
   var showBtn = document.querySelector('#classic-rows .classic-show[data-i="' + i + '"]');
-  if (inp && !inp.classList.contains('correct')) {
+  if (inp && !inp.classList.contains('correct') && !inp.classList.contains('revealed')) {
     inp.value = expected;
-    inp.classList.add('correct');
+    inp.classList.add('revealed'); // visat – visas inte och räknas inte som rättstavat
     inp.readOnly = true;
     if (spk) { spk.classList.remove('hidden'); }
     if (showBtn) { showBtn.classList.add('hidden'); }
-    classicCheckDone();
+    classicCheckSettled();
   }
 }
 
@@ -2370,6 +2385,7 @@ function init() {
   document.getElementById('btn-game-match').onclick = startMatch;
   document.getElementById('btn-game-spell').onclick = startSpell;
   document.getElementById('classic-show-all').onclick = classicShowAll;
+  document.getElementById('classic-retry').onclick = startClassic;
   document.getElementById('classic-back').onclick = showMenu;
   document.getElementById('quiz-back').onclick = showMenu;
   document.getElementById('match-back').onclick = showMenu;
