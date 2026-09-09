@@ -2071,8 +2071,10 @@ function renderQuiz() {
   });
   shuffle(others).slice(0, 3).forEach(function (c) { decoys.push(c); });
   var choices = shuffle([expected].concat(decoys));
+  // Svenskt ord presenteras som ledordet i "Lyssna & Stava" (spell-hint)
+  var promptCls = svPrompt ? 'spell-hint' : 'quiz-prompt';
   box.innerHTML = '<div class="quiz-prompt-label">' + esc(label) + '</div>' +
-    '<div class="quiz-prompt">' + esc(prompt) + '</div>' +
+    '<div class="' + promptCls + '">' + esc(prompt) + '</div>' +
     '<div class="quiz-choices"></div>';
   var cbox = box.querySelector('.quiz-choices');
   choices.forEach(function (c) {
