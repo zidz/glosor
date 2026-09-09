@@ -36,6 +36,7 @@ FEATURES = {
     "flervalsquiz",
     "matcha_orden",
     "lyssna_och_stava",
+    "sant_eller_falskt",
     "dela_läxa",
     "importera_url",
 }
