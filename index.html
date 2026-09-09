@@ -2307,6 +2307,7 @@ function spellListen() {
   status.classList.add('hidden');
   btn.classList.add('speaking');
   btn.textContent = '🔊 Pratar...';
+  document.getElementById('spell-input').focus();
   speak(word, g.language, function (err) {
     if (err === 2) { return; } // ignoreras – ett ord är redan igång; det originalanropet stoppar knappen
     if (err) {
